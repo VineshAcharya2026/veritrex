@@ -13,6 +13,8 @@ import {
   Globe,
   Crown,
   CheckCircle,
+  AlertTriangle,
+  Flag,
 } from "lucide-react";
 import type { NavItem } from "@/components/layout/Sidebar";
 
@@ -22,6 +24,8 @@ export const superAdminNav: NavItem[] = [
   { href: "/dashboard/admin/mentorships", label: "Mentorships", icon: GraduationCap },
   { href: "/dashboard/admin/inner-circle", label: "Inner Circle", icon: Crown },
   { href: "/dashboard/admin/outcomes", label: "Outcomes", icon: CheckCircle },
+  { href: "/dashboard/admin/cheat-flags", label: "Cheat Flags", icon: Flag },
+  { href: "/dashboard/admin/strikes", label: "Strikes", icon: AlertTriangle },
   { href: "/dashboard/admin/logins", label: "Logins", icon: LogIn },
   { href: "/dashboard/admin/blacklist", label: "Blacklist", icon: ShieldBan },
   { href: "/dashboard/admin/config", label: "Config", icon: Settings },
@@ -41,6 +45,7 @@ export const mentorNav: NavItem[] = [
 export const menteeNav: NavItem[] = [
   { href: "/dashboard/mentee", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/mentee/mentors", label: "Find Mentors", icon: GraduationCap },
+  { href: "/dashboard/mentee/profile", label: "Profile", icon: UserCircle },
   { href: "/dashboard/mentee/goals", label: "Goals", icon: Target },
   { href: "/dashboard/mentee/reflection", label: "Reflection", icon: HeartHandshake },
 ];

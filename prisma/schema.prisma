@@ -8,23 +8,27 @@ datasource db {
 }
 
 model User {
-  id             String         @id @default(cuid())
-  email          String         @unique
-  phone          String?        @unique
-  passwordHash   String
-  role           Role           @default(MENTEE)
-  status         UserStatus     @default(ACTIVE)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  profile        Profile?
-  mentorProfile  MentorProfile?
-  menteeProfile  MenteeProfile?
-  auditLogs      AuditLog[]
-  notifications  Notification[]
-  loginEvents    LoginEvent[]
-  mentorSessions    Mentorship[]       @relation("MentorUser")
-  menteeSessions    Mentorship[]       @relation("MenteeUser")
-  memberReflection  MemberReflection?
+  id               String              @id @default(cuid())
+  email            String              @unique
+  phone            String?             @unique
+  passwordHash     String
+  role             Role                @default(MENTEE)
+  status           UserStatus          @default(ACTIVE)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  profile          Profile?
+  mentorProfile    MentorProfile?
+  menteeProfile    MenteeProfile?
+  auditLogs        AuditLog[]
+  notifications    Notification[]
+  loginEvents      LoginEvent[]
+  mentorSessions   Mentorship[]        @relation("MentorUser")
+  menteeSessions   Mentorship[]        @relation("MenteeUser")
+  memberReflection MemberReflection?
+  ratingsGiven     SessionRating[]     @relation("RaterUser")
+  ratingsReceived  SessionRating[]     @relation("RatedUser")
+  trustScore       TrustScoreRecord?
+  strikes          ReliabilityStrike[]
 }
 
 enum LeadershipLoneliness {
@@ -137,29 +141,88 @@ enum InnerCircleStatus {
   REJECTED
 }
 
+enum SessionOutcome {
+  COMPLETED
+  MENTOR_NO_SHOW
+  MENTEE_NO_SHOW
+  MUTUAL_CANCEL
+}
+
+enum TrustTier {
+  EMERGING
+  ESTABLISHED
+  RECOGNISED
+  DISTINGUISHED
+}
+
+enum MenteeCurrentStatus {
+  STUDENT
+  GRADUATE
+  PROFESSIONAL
+  ENTREPRENEUR
+  CAREER_BREAK
+  CAREER_SWITCHER
+}
+
+enum MentoringFormat {
+  VIDEO
+  AUDIO
+  CHAT
+  GROUP
+  ASYNC
+}
+
+enum StrikeReason {
+  NO_SHOW
+  LATE_CANCEL
+}
+
 model MentorProfile {
-  id                      String          @id @default(cuid())
-  userId                  String          @unique
-  user                    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  company                 String?
-  title                   String?
-  expertise               String[]
-  yearsExp                Int?
-  maxMentees              Int             @default(5)
-  linkedInUrl             String?
-  city                    String?
-  industry                String?
-  seniorityLevel          SeniorityLevel?
-  interests               String[]        @default([])
-  isEliteFounder100       Boolean         @default(false)
-  thoughtLeadershipScore  Int             @default(0)
-  creditsBalance          Int             @default(0)
-  offersFreeMentorship    Boolean         @default(false)
-  skills                  MentorSkill[]
-  content                 MentorContent[]
-  creditLedger            CreditLedger[]
-  ratingsReceived         MentorshipRating[] @relation("MentorRatings")
-  innerCircleApplication  InnerCircleApplication?
+  id                     String          @id @default(cuid())
+  userId                 String          @unique
+  user                   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company                String?
+  title                  String?
+  expertise              String[]
+  yearsExp               Int?
+  maxMentees             Int             @default(5)
+  linkedInUrl            String?
+  city                   String?
+  industry               String?
+  seniorityLevel         SeniorityLevel?
+  interests              String[]        @default([])
+  isEliteFounder100      Boolean         @default(false)
+  thoughtLeadershipScore Int             @default(0)
+  creditsBalance         Int             @default(0)
+  offersFreeMentorship   Boolean         @default(false)
+
+  // Phase 1 questionnaire fields
+  professionalHeadline   String?           @db.VarChar(120)
+  professionalSummary    String?           @db.Text
+  threeWords             String[]          @default([])
+  areasOfExpertise       String[]          @default([])
+  industriesWorked       String[]          @default([])
+  yearsOfExperienceRange String?
+  whyMentor              String?           @db.Text
+  preferredMenteeTypes   String[]          @default([])
+  challengesCanHelp      String[]          @default([])
+  mentoringStyle         String[]          @default([])
+  sessionExpectations    String?           @db.Text
+  menteeExpectations     String?           @db.Text
+  achievements           String?           @db.Text
+  certifications         String?
+  personalInterests      String[]          @default([])
+  influentialQuote       String?           @db.Text
+  preferredFormats       MentoringFormat[]
+  languages              String[]          @default([])
+  completeSentence       String?           @db.Text
+  welcomeMessage         String?           @db.Text
+
+  skills                 MentorSkill[]
+  content                MentorContent[]
+  creditLedger           CreditLedger[]
+  ratingsReceived        MentorshipRating[]      @relation("MentorRatings")
+  innerCircleApplication InnerCircleApplication?
 }
 
 model MenteeProfile {
@@ -169,24 +232,128 @@ model MenteeProfile {
   currentRole   String?
   goals         String?
   desiredSkills String[]
+
+  // Onboarding questionnaire fields
+  country                String?
+  city                   String?
+  currentStatus          MenteeCurrentStatus?
+  highestQualification   String?
+  currentInstitution     String?
+  currentDesignation     String?
+  yearsOfExperience      String?
+  preferredIndustry      String?
+  careerGoal             String?              @db.Text
+  guidanceAreas          String[]             @default([])
+  skillsToDevelo         String[]             @default([])
+  preferredMentorProfile String?              @db.Text
+  preferredModes         MentoringFormat[]
+  languages              String[]             @default([])
+  biggestChallenge       String?              @db.Text
+  successDefinition      String?              @db.Text
 }
 
 model Mentorship {
-  id                    String              @id @default(cuid())
-  mentorId              String
-  menteeId              String
-  mentor                User                @relation("MentorUser", fields: [mentorId], references: [id], onDelete: Cascade)
-  mentee                User                @relation("MenteeUser", fields: [menteeId], references: [id], onDelete: Cascade)
-  status                MentorshipStatus    @default(PENDING)
-  message               String?
-  isFreeOrConcessional  Boolean             @default(false)
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
-  rating                MentorshipRating?
-  outcomes              MentorshipOutcome[]
-  creditEntries         CreditLedger[]
+  id                   String              @id @default(cuid())
+  mentorId             String
+  menteeId             String
+  mentor               User                @relation("MentorUser", fields: [mentorId], references: [id], onDelete: Cascade)
+  mentee               User                @relation("MenteeUser", fields: [menteeId], references: [id], onDelete: Cascade)
+  status               MentorshipStatus    @default(PENDING)
+  message              String?
+  isFreeOrConcessional Boolean             @default(false)
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  rating               MentorshipRating?
+  outcomes             MentorshipOutcome[]
+  creditEntries        CreditLedger[]
+  sessions             MentorshipSession[]
 
   @@unique([mentorId, menteeId])
+}
+
+model MentorshipSession {
+  id              String              @id @default(cuid())
+  mentorshipId    String
+  mentorship      Mentorship          @relation(fields: [mentorshipId], references: [id], onDelete: Cascade)
+  scheduledAt     DateTime
+  completedAt     DateTime?
+  outcome         SessionOutcome?
+  outcomeLoggedBy String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  ratings         SessionRating[]
+  strikes         ReliabilityStrike[]
+}
+
+model SessionRating {
+  id          String            @id @default(cuid())
+  sessionId   String
+  session     MentorshipSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  raterId     String
+  rater       User              @relation("RaterUser", fields: [raterId], references: [id], onDelete: Cascade)
+  ratedUserId String
+  ratedUser   User              @relation("RatedUser", fields: [ratedUserId], references: [id], onDelete: Cascade)
+  raterRole   Role
+
+  // Mentee-rates-mentor dimensions (null when mentor rates mentee)
+  knowledge      Int?
+  actionability  Int?
+  preparation    Int?
+  clarity        Int?
+  responsiveness Int?
+
+  // Mentor-rates-mentee dimensions (null when mentee rates mentor)
+  goalClarity       Int?
+  menteePreparation Int?
+  engagement        Int?
+  followThrough     Int?
+
+  weightedScore Float
+  isUnilateral  Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@unique([sessionId, raterId])
+}
+
+model ReliabilityStrike {
+  id        String            @id @default(cuid())
+  userId    String
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId String
+  session   MentorshipSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  reason    StrikeReason
+  createdAt DateTime          @default(now())
+}
+
+model TrustScoreRecord {
+  id                  String    @id @default(cuid())
+  userId              String    @unique
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verificationScore   Float     @default(0)
+  ratingScore         Float     @default(0)
+  activityScore       Float     @default(0)
+  outcomeScore        Float     @default(0)
+  endorsementScore    Float     @default(0)
+  totalScore          Float     @default(0)
+  tier                TrustTier @default(EMERGING)
+  tierPromotionCycles Int       @default(0)
+  tierDemotionWarned  Boolean   @default(false)
+  updatedAt           DateTime  @updatedAt
+  createdAt           DateTime  @default(now())
+}
+
+model CheatFlag {
+  id             String   @id @default(cuid())
+  mentorUserId   String
+  menteeUserId   String
+  reason         String   @db.Text
+  pairAvgScore   Float?
+  othersAvgScore Float?
+  sessionCount   Int?
+  reviewed       Boolean  @default(false)
+  adminNotes     String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model MentorSkill {
@@ -202,41 +369,41 @@ model MentorSkill {
 }
 
 model CreditLedger {
-  id            String        @id @default(cuid())
-  mentorId      String
-  mentor        MentorProfile @relation(fields: [mentorId], references: [id], onDelete: Cascade)
-  amount        Int
-  type          CreditType
-  reason        String?
-  mentorshipId  String?
-  mentorship    Mentorship?   @relation(fields: [mentorshipId], references: [id], onDelete: SetNull)
-  createdAt     DateTime      @default(now())
+  id           String        @id @default(cuid())
+  mentorId     String
+  mentor       MentorProfile @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  amount       Int
+  type         CreditType
+  reason       String?
+  mentorshipId String?
+  mentorship   Mentorship?   @relation(fields: [mentorshipId], references: [id], onDelete: SetNull)
+  createdAt    DateTime      @default(now())
 }
 
 model MentorshipRating {
-  id            String     @id @default(cuid())
-  mentorshipId  String     @unique
-  mentorship    Mentorship @relation(fields: [mentorshipId], references: [id], onDelete: Cascade)
-  mentorId      String
-  mentor        MentorProfile @relation("MentorRatings", fields: [mentorId], references: [id], onDelete: Cascade)
-  menteeId      String
-  rating        Int
-  review        String?    @db.Text
-  createdAt     DateTime   @default(now())
+  id           String        @id @default(cuid())
+  mentorshipId String        @unique
+  mentorship   Mentorship    @relation(fields: [mentorshipId], references: [id], onDelete: Cascade)
+  mentorId     String
+  mentor       MentorProfile @relation("MentorRatings", fields: [mentorId], references: [id], onDelete: Cascade)
+  menteeId     String
+  rating       Int
+  review       String?       @db.Text
+  createdAt    DateTime      @default(now())
 }
 
 model MentorshipOutcome {
-  id            String      @id @default(cuid())
-  mentorshipId  String
-  mentorship    Mentorship  @relation(fields: [mentorshipId], references: [id], onDelete: Cascade)
-  mentorId      String
-  outcomeType   OutcomeType
-  city          String?
-  industry      String?
-  notes         String?     @db.Text
-  verified      Boolean     @default(false)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id           String      @id @default(cuid())
+  mentorshipId String
+  mentorship   Mentorship  @relation(fields: [mentorshipId], references: [id], onDelete: Cascade)
+  mentorId     String
+  outcomeType  OutcomeType
+  city         String?
+  industry     String?
+  notes        String?     @db.Text
+  verified     Boolean     @default(false)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 }
 
 model MentorContent {
@@ -282,15 +449,15 @@ model LoginEvent {
 }
 
 model AuditLog {
-  id         String   @id @default(cuid())
-  userId     String?
-  user       User?    @relation(fields: [userId], references: [id])
-  action     String
-  entity     String
-  entityId   String?
-  ipAddress  String?
-  metadata   Json?
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  ipAddress String?
+  metadata  Json?
+  createdAt DateTime @default(now())
 }
 
 model Blacklist {

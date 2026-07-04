@@ -1,30 +1,22 @@
 import { prisma } from "@/lib/prisma";
+import { computeCorrectedAverage } from "@/lib/rating-engine";
 
 export async function recalculateThoughtLeadershipScore(mentorUserId: string) {
   const profile = await prisma.mentorProfile.findUnique({
     where: { userId: mentorUserId },
     include: {
-      ratingsReceived: true,
       content: true,
       creditLedger: { where: { amount: { gt: 0 } } },
     },
   });
   if (!profile) return 0;
 
-  const mentorUser = await prisma.user.findUnique({
-    where: { id: mentorUserId },
-    select: { id: true },
-  });
-  if (!mentorUser) return 0;
-
   const verifiedOutcomes = await prisma.mentorshipOutcome.count({
     where: { mentorId: mentorUserId, verified: true },
   });
 
-  const ratings = profile.ratingsReceived;
-  const avgRating =
-    ratings.length > 0 ? ratings.reduce((s, r) => s + r.rating, 0) / ratings.length : 0;
-  const ratingScore = (avgRating / 5) * 40;
+  const { corrected, count } = await computeCorrectedAverage(mentorUserId);
+  const ratingScore = count > 0 ? (corrected / 5) * 40 : 0;
 
   const contentCount = profile.content.length;
   const contentScore = Math.min(contentCount * 4, 20);
