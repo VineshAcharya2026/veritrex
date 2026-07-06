@@ -4,16 +4,8 @@
   "framework": "nextjs",
   "crons": [
     {
-      "path": "/api/cron?task=unilateral",
-      "schedule": "0 * * * *"
-    },
-    {
-      "path": "/api/cron?task=trust-scores",
+      "path": "/api/cron",
       "schedule": "0 2 * * *"
-    },
-    {
-      "path": "/api/cron?task=cheating",
-      "schedule": "0 3 * * 0"
     }
   ]
 }
