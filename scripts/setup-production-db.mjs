@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 /**
- * One-time production DB setup for Vercel.
+ * One-time production DB setup (run locally, not on Workers).
  * Usage: DATABASE_URL="postgresql://..." node scripts/setup-production-db.mjs
- * Or:    npx vercel env pull .env.production.local && node scripts/setup-production-db.mjs
  */
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -26,7 +25,6 @@ loadEnvFile(".env.production.local");
 loadEnvFile(".env.local");
 loadEnvFile(".env");
 
-// Prefer production-local values when present (loadEnvFile only fills unset keys).
 function preferEnvFile(file) {
   const path = resolve(root, file);
   if (!existsSync(path)) return;
@@ -46,11 +44,9 @@ if (!url || url.startsWith("file:")) {
 ERROR: DATABASE_URL must be a PostgreSQL connection string.
 
 Setup steps:
-1. Open https://vercel.com/vineshjm-3253s-projects/~/integrations/accept-terms/neon
-2. Accept Neon terms, then run: npx vercel integration add neon
-3. Connect a database to the trust-hire project in Vercel Storage tab
-4. Run: npx vercel env pull .env.production.local
-5. Re-run: node scripts/setup-production-db.mjs
+1. Create a Postgres database (Neon, Supabase, etc.)
+2. Set DATABASE_URL in .env or pass it inline
+3. Re-run: node scripts/setup-production-db.mjs
 `);
   process.exit(1);
 }

@@ -5,8 +5,9 @@ Production-ready mentorship platform built with Next.js 14, PostgreSQL, Prisma, 
 ## Stack
 
 - **Frontend:** Next.js 14 App Router, TypeScript, Tailwind CSS
-- **Backend:** Next.js API Routes
-- **Database:** PostgreSQL + Prisma ORM
+- **Backend:** Next.js API Routes on Cloudflare Workers (OpenNext)
+- **Database:** PostgreSQL + Prisma ORM (via Hyperdrive on Cloudflare)
+- **Storage:** Cloudflare R2 (mentor media uploads)
 - **Auth:** NextAuth.js (credentials, JWT, role-based access)
 
 ## Roles
@@ -69,43 +70,74 @@ Open [http://localhost:3000](http://localhost:3000).
 | Mentor | mentor@trusthire.com | Password123! |
 | Mentee | mentee@trusthire.com | Password123! |
 
-## Deploy to Vercel
+## Deploy to Cloudflare Workers
 
-Login **requires PostgreSQL** — SQLite does not work on Vercel serverless.
+Login **requires PostgreSQL** — SQLite does not work on Workers.
 
 ### 1. Create a PostgreSQL database
 
-Use [Neon](https://neon.tech) (free), [Supabase](https://supabase.com), or Vercel Postgres.
+Use [Neon](https://neon.tech) (free) or [Supabase](https://supabase.com). Use a **pooled** connection string (`?pgbouncer=true`).
 
-**Quick path via Vercel CLI:**
+### 2. Create Cloudflare resources
 
-```bash
-npx vercel link --project trust-hire
-# Accept terms in browser, then:
-npx vercel integration add neon
-# Connect database in Vercel → Storage tab
-npx vercel env pull .env.production.local
-npm run db:setup-production
-```
+In the [Cloudflare dashboard](https://dash.cloudflare.com):
 
-### 2. Set Vercel environment variables
+1. **R2** — Create bucket `trust-hire-mentor-content` (or update `wrangler.toml`). Enable public access or attach a custom domain; set `R2_PUBLIC_URL`.
+2. **Hyperdrive** — Create a config pointing to your Postgres database. Uncomment the `[[hyperdrive]]` block in `wrangler.toml` and set the config `id`.
+3. **Workers** — Log in via `npx wrangler login`.
 
-In **Vercel → Project → Settings → Environment Variables** (Production + Preview):
-
-| Variable | Value |
-|----------|-------|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `NEXTAUTH_SECRET` | Random secret (`openssl rand -base64 32`) |
-| `NEXTAUTH_URL` | `https://your-app.vercel.app` (no trailing slash) |
-
-### 3. Initialize the production database (one-time)
+### 3. Set secrets and environment variables
 
 ```bash
-npm run db:setup-production
+npx wrangler secret put DATABASE_URL      # fallback if Hyperdrive not bound
+npx wrangler secret put NEXTAUTH_SECRET
+npx wrangler secret put NEXTAUTH_URL      # https://your-app.workers.dev
+npx wrangler secret put R2_PUBLIC_URL
+npx wrangler secret put CRON_SECRET
 ```
 
-### 4. Deploy
+For local Workers preview, copy values into `.dev.vars` (never commit secrets).
 
-Push to GitHub — Vercel redeploys automatically. Test login with seeded demo accounts.
+### 4. Initialize the production database (one-time)
 
-If login fails, check **Vercel → Deployments → Functions → Logs** for `[auth] authorize failed` errors.
+From your machine (not from Workers):
+
+```bash
+DATABASE_URL="your-postgres-url" npm run db:setup-production
+```
+
+### 5. Build and deploy
+
+```bash
+npm run cf:deploy
+```
+
+Or connect your GitHub repo in **Cloudflare Workers → Settings → Builds**:
+
+| Setting | Value |
+|---------|-------|
+| Build command | `npm run cf:build` |
+| Deploy command | `npm run deploy` |
+
+Do **not** use `npm run build` + `npx wrangler deploy` — that skips the OpenNext adapter step.
+
+### 6. Schedule cron jobs
+
+Call `GET /api/cron` with `Authorization: Bearer <CRON_SECRET>` on a schedule. Options:
+
+- [Cloudflare Cron Triggers](https://developers.cloudflare.com/workers/configuration/cron-triggers/) (via a small companion worker or HTTP cron)
+- External scheduler (e.g. cron-job.org) hitting your production URL
+
+Split heavy tasks with query params: `?task=unilateral`, `?task=trust-scores`, `?task=cheating`.
+
+### 7. Preview locally in the Workers runtime
+
+```bash
+npm run cf:preview
+```
+
+### Troubleshooting
+
+- **Database errors on Workers** — Ensure Hyperdrive is configured and `compatibility_date` in `wrangler.toml` is `2025-04-01` or later.
+- **Upload failures** — Verify `MENTOR_CONTENT` R2 binding and `R2_PUBLIC_URL` secret.
+- **Auth redirect issues** — `NEXTAUTH_URL` must match your production domain exactly (no trailing slash).

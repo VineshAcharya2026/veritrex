@@ -6,18 +6,19 @@ import { getClientIp } from "@/lib/utils";
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const { error, session } = await requireSuperAdmin();
   if (error || !session) return error;
 
-  await prisma.blacklist.delete({ where: { id: params.id } });
+  await prisma.blacklist.delete({ where: { id } });
 
   await logAudit({
     userId: session.user.id,
     action: "BLACKLIST_REMOVED",
     entity: "Blacklist",
-    entityId: params.id,
+    entityId: id,
     ipAddress: getClientIp(request),
   });
 

@@ -6,19 +6,20 @@ import { getClientIp } from "@/lib/utils";
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const { error, session } = await requireSuperAdmin();
   if (error || !session) return error;
 
-  const existing = await prisma.user.findUnique({ where: { id: params.id } });
+  const existing = await prisma.user.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (existing.role === "SUPER_ADMIN") {
     return NextResponse.json({ error: "Cannot suspend super admin" }, { status: 403 });
   }
 
   await prisma.user.update({
-    where: { id: params.id },
+    where: { id },
     data: { status: "SUSPENDED" },
   });
 
@@ -26,7 +27,7 @@ export async function PATCH(
     userId: session.user.id,
     action: "USER_SUSPENDED",
     entity: "User",
-    entityId: params.id,
+    entityId: id,
     ipAddress: getClientIp(request),
   });
 

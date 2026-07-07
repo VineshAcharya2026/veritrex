@@ -1,0 +1,31 @@
+"$schema" = "./node_modules/wrangler/config-schema.json"
+name = "tursthire"
+main = ".open-next/worker.js"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+[[services]]
+binding = "WORKER_SELF_REFERENCE"
+service = "tursthire"
+
+# Mentor profile media (images, video, audio)
+[[r2_buckets]]
+binding = "MENTOR_CONTENT"
+bucket_name = "trust-hire-mentor-content"
+
+# Optional: Next.js incremental cache (create bucket in Cloudflare dashboard)
+# [[r2_buckets]]
+# binding = "NEXT_INC_CACHE_R2_BUCKET"
+# bucket_name = "trust-hire-next-cache"
+
+# PostgreSQL connection pool — create in Cloudflare Dashboard → Hyperdrive, then set id:
+# [[hyperdrive]]
+# binding = "HYPERDRIVE"
+# id = "<your-hyperdrive-config-id>"
+
+[observability]
+enabled = true

@@ -12,8 +12,9 @@ const schema = z.object({
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const { error, session } = await requireRole("MENTOR");
   if (error || !session) return error;
 
@@ -24,7 +25,7 @@ export async function PATCH(
   }
 
   const mentorship = await prisma.mentorship.findFirst({
-    where: { id: params.id, mentorId: session.user.id },
+    where: { id, mentorId: session.user.id },
     include: { mentee: { include: { profile: true } } },
   });
   if (!mentorship) {
@@ -42,7 +43,7 @@ export async function PATCH(
   }
 
   const updated = await prisma.mentorship.update({
-    where: { id: params.id },
+    where: { id },
     data: {
       status: parsed.data.status,
       ...(parsed.data.isFreeOrConcessional !== undefined
@@ -57,7 +58,7 @@ export async function PATCH(
       CREDIT_AMOUNTS.MENTORSHIP_COMPLETED,
       "MENTORSHIP_COMPLETED",
       "Mentorship completed",
-      params.id
+      id
     );
     if (updated.isFreeOrConcessional) {
       await awardCreditsAndRecalculate(
@@ -65,14 +66,10 @@ export async function PATCH(
         CREDIT_AMOUNTS.FREE_MENTORSHIP,
         "FREE_MENTORSHIP",
         "Free/concessional mentorship completed",
-        params.id
+        id
       );
     }
   }
-
-  const menteeName = mentorship.mentee.profile
-    ? `${mentorship.mentee.profile.firstName} ${mentorship.mentee.profile.lastName}`
-    : mentorship.mentee.email;
 
   await createNotification(
     mentorship.menteeId,

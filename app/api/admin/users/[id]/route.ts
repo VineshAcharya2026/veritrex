@@ -25,13 +25,14 @@ const updateUserSchema = z.object({
 
 export async function GET(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const { error } = await requireSuperAdmin();
   if (error) return error;
 
   const user = await prisma.user.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       profile: true,
       mentorProfile: true,
@@ -49,13 +50,14 @@ export async function GET(
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const { error, session } = await requireSuperAdmin();
   if (error || !session) return error;
 
   const existing = await prisma.user.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: { profile: true, mentorProfile: true, menteeProfile: true },
   });
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -74,7 +76,7 @@ export async function PATCH(
 
   const user = await prisma.$transaction(async (tx) => {
     const updated = await tx.user.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(data.phone !== undefined ? { phone: data.phone } : {}),
         ...(data.role ? { role: data.role } : {}),
@@ -96,7 +98,7 @@ export async function PATCH(
 
     if (updated.role === "MENTOR" && updated.mentorProfile) {
       await tx.mentorProfile.update({
-        where: { userId: params.id },
+        where: { userId: id },
         data: {
           ...(data.companyName !== undefined ? { company: data.companyName } : {}),
           ...(data.title !== undefined ? { title: data.title } : {}),
@@ -108,7 +110,7 @@ export async function PATCH(
 
     if (updated.role === "MENTEE" && updated.menteeProfile) {
       await tx.menteeProfile.update({
-        where: { userId: params.id },
+        where: { userId: id },
         data: {
           ...(data.currentRole !== undefined ? { currentRole: data.currentRole } : {}),
           ...(data.goals !== undefined ? { goals: data.goals } : {}),
@@ -126,7 +128,7 @@ export async function PATCH(
     userId: session.user.id,
     action: "USER_UPDATED",
     entity: "User",
-    entityId: params.id,
+    entityId: id,
     ipAddress: getClientIp(request),
     metadata: { fields: Object.keys(data) },
   });
@@ -136,19 +138,20 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const { error, session } = await requireSuperAdmin();
   if (error || !session) return error;
 
-  const existing = await prisma.user.findUnique({ where: { id: params.id } });
+  const existing = await prisma.user.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (existing.role === "SUPER_ADMIN") {
     return NextResponse.json({ error: "Cannot delete super admin" }, { status: 403 });
   }
 
   await prisma.user.update({
-    where: { id: params.id },
+    where: { id },
     data: { status: "DELETED" },
   });
 
@@ -156,7 +159,7 @@ export async function DELETE(
     userId: session.user.id,
     action: "USER_DELETED",
     entity: "User",
-    entityId: params.id,
+    entityId: id,
     ipAddress: getClientIp(request),
   });
 

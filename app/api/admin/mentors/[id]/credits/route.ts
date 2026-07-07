@@ -12,8 +12,9 @@ const schema = z.object({
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const { error } = await requireSuperAdmin();
   if (error) return error;
 
@@ -24,7 +25,7 @@ export async function PATCH(
   }
 
   const user = await prisma.user.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: { mentorProfile: true },
   });
   if (!user || user.role !== "MENTOR" || !user.mentorProfile) {

@@ -11,8 +11,9 @@ const schema = z.object({
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const { error } = await requireSuperAdmin();
   if (error) return error;
 
@@ -23,14 +24,14 @@ export async function PATCH(
   }
 
   const existing = await prisma.mentorshipOutcome.findUnique({
-    where: { id: params.id },
+    where: { id },
   });
   if (!existing) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
   const outcome = await prisma.mentorshipOutcome.update({
-    where: { id: params.id },
+    where: { id },
     data: { verified: parsed.data.verified },
   });
 

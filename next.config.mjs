@@ -1,15 +1,20 @@
 /** @type {import('next').NextConfig} */
-function resolveNextAuthUrl() {
+function resolveAppUrl() {
   const configured = process.env.NEXTAUTH_URL?.trim();
-  if (configured) return configured;
-  const vercel = process.env.VERCEL_URL?.trim();
-  if (vercel) return `https://${vercel}`;
+  if (configured) return configured.replace(/\/$/, "");
+
+  const cf =
+    process.env.CF_PAGES_URL?.trim() ||
+    process.env.CLOUDFLARE_URL?.trim() ||
+    process.env.WORKER_URL?.trim();
+  if (cf) return cf.startsWith("http") ? cf.replace(/\/$/, "") : `https://${cf}`;
+
   return "http://localhost:3000";
 }
 
 const nextConfig = {
   env: {
-    NEXTAUTH_URL: resolveNextAuthUrl(),
+    NEXTAUTH_URL: resolveAppUrl(),
   },
   experimental: {
     serverActions: {
@@ -19,3 +24,6 @@ const nextConfig = {
 };
 
 export default nextConfig;
+
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
+initOpenNextCloudflareForDev();

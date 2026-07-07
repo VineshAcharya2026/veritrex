@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { put } from "@vercel/blob";
 import { requireRole } from "@/lib/auth";
+import { isStorageConfigured, uploadPublicFile } from "@/lib/storage";
 
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
@@ -12,9 +12,12 @@ export async function POST(request: Request) {
   const { error, session } = await requireRole("MENTOR");
   if (error || !session) return error;
 
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+  if (!isStorageConfigured()) {
     return NextResponse.json(
-      { error: "File upload not configured. Set BLOB_READ_WRITE_TOKEN." },
+      {
+        error:
+          "File upload not configured. Bind MENTOR_CONTENT in wrangler.toml and set R2_PUBLIC_URL.",
+      },
       { status: 503 }
     );
   }
@@ -41,14 +44,13 @@ export async function POST(request: Request) {
     );
   }
 
-  const blob = await put(`mentor-content/${session.user.id}/${Date.now()}-${file.name}`, file, {
-    access: "public",
-    token: process.env.BLOB_READ_WRITE_TOKEN,
-  });
+  const key = `mentor-content/${session.user.id}/${Date.now()}-${file.name}`;
+  const buffer = await file.arrayBuffer();
+  const uploaded = await uploadPublicFile(key, buffer, file.type);
 
   return NextResponse.json({
-    fileUrl: blob.url,
-    storageKey: blob.pathname,
+    fileUrl: uploaded.fileUrl,
+    storageKey: uploaded.storageKey,
     mimeType: file.type,
     fileSize: file.size,
   });

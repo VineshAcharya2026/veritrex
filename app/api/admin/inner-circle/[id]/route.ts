@@ -10,8 +10,9 @@ const schema = z.object({
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const { error } = await requireSuperAdmin();
   if (error) return error;
 
@@ -22,7 +23,7 @@ export async function PATCH(
   }
 
   const application = await prisma.innerCircleApplication.update({
-    where: { id: params.id },
+    where: { id },
     data: {
       status: parsed.data.status,
       adminNotes: parsed.data.adminNotes,
