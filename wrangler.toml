@@ -12,10 +12,10 @@ binding = "ASSETS"
 binding = "WORKER_SELF_REFERENCE"
 service = "tursthire"
 
-# Mentor profile media (images, video, audio)
-[[r2_buckets]]
-binding = "MENTOR_CONTENT"
-bucket_name = "trust-hire-mentor-content"
+# Mentor profile media — enable R2 in Cloudflare Dashboard first, then uncomment:
+# [[r2_buckets]]
+# binding = "MENTOR_CONTENT"
+# bucket_name = "trust-hire-mentor-content"
 
 # Optional: Next.js incremental cache (create bucket in Cloudflare dashboard)
 # [[r2_buckets]]
