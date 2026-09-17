@@ -2,8 +2,12 @@ import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getLifetimeCredits } from "@/lib/credits";
-import { getMentorNationBuildingStats } from "@/lib/mentor-scores";
-import { getStrikeCount, computeCorrectedAverage } from "@/lib/rating-engine";
+import { getMentorImpact } from "@/lib/nation-building-impact";
+import {
+  getStrikeCount,
+  getCashOutEligibility,
+  pendingFeedbackWhere,
+} from "@/lib/rating-engine";
 
 export async function GET() {
   const { error, session } = await requireRole("MENTOR");
@@ -14,13 +18,15 @@ export async function GET() {
   const [
     profile,
     credits,
-    nationBuilding,
+    impact,
     activeMentees,
     pendingRequests,
     trustScore,
     strikeCount,
-    correctedRating,
     pendingSessions,
+    cashOutEligibility,
+    userProfile,
+    activeMentorships,
   ] = await Promise.all([
     prisma.mentorProfile.findUnique({
       where: { userId: mentorUserId },
@@ -30,17 +36,15 @@ export async function GET() {
       },
     }),
     getLifetimeCredits(mentorUserId),
-    getMentorNationBuildingStats(mentorUserId),
+    getMentorImpact(mentorUserId),
     prisma.mentorship.count({ where: { mentorId: mentorUserId, status: "ACTIVE" } }),
     prisma.mentorship.count({ where: { mentorId: mentorUserId, status: "PENDING" } }),
     prisma.trustScoreRecord.findUnique({ where: { userId: mentorUserId } }),
     getStrikeCount(mentorUserId),
-    computeCorrectedAverage(mentorUserId),
     prisma.mentorshipSession.findMany({
       where: {
         mentorship: { mentorId: mentorUserId },
-        outcome: "COMPLETED",
-        ratings: { none: { raterId: mentorUserId } },
+        ...pendingFeedbackWhere(mentorUserId),
       },
       include: {
         mentorship: {
@@ -48,7 +52,22 @@ export async function GET() {
         },
       },
       orderBy: { completedAt: "desc" },
-      take: 5,
+    }),
+    getCashOutEligibility(mentorUserId),
+    prisma.profile.findUnique({ where: { userId: mentorUserId } }),
+    prisma.mentorship.findMany({
+      where: { mentorId: mentorUserId, status: "ACTIVE" },
+      include: {
+        mentee: {
+          include: {
+            profile: true,
+            menteeProfile: true,
+            trustScore: { select: { tier: true } },
+          },
+        },
+      },
+      take: 6,
+      orderBy: { updatedAt: "desc" },
     }),
   ]);
 
@@ -60,20 +79,49 @@ export async function GET() {
           isEliteFounder100: profile.isEliteFounder100,
           thoughtLeadershipScore: profile.thoughtLeadershipScore,
           contentCount: profile._count.content,
+          title: profile.title,
+          company: profile.company,
+          headline: profile.professionalHeadline,
+          city: profile.city,
+          industry: profile.industry,
+          expertise: profile.expertise,
         }
       : null,
-    credits,
-    ratings: {
-      average: correctedRating.corrected > 0
-        ? Math.round(correctedRating.corrected * 10) / 10
-        : null,
-      count: correctedRating.count,
+    selfCard: {
+      userId: mentorUserId,
+      name: userProfile
+        ? `${userProfile.firstName} ${userProfile.lastName}`
+        : session.user.name || "Mentor",
+      avatar: userProfile?.avatar ?? null,
+      title: profile?.title ?? null,
+      company: profile?.company ?? null,
+      headline: profile?.professionalHeadline ?? null,
+      city: profile?.city ?? null,
+      industry: profile?.industry ?? null,
+      expertise: profile?.expertise ?? [],
+      tier: trustScore?.tier ?? "EMERGING",
+      isEliteFounder100: profile?.isEliteFounder100 ?? false,
     },
+    menteeCards: activeMentorships.map((m) => ({
+      userId: m.menteeId,
+      name: m.mentee.profile
+        ? `${m.mentee.profile.firstName} ${m.mentee.profile.lastName}`
+        : "Mentee",
+      avatar: m.mentee.profile?.avatar ?? null,
+      currentRole: m.mentee.menteeProfile?.currentRole ?? null,
+      currentStatus: m.mentee.menteeProfile?.currentStatus ?? null,
+      careerGoal: m.mentee.menteeProfile?.careerGoal ?? null,
+      goals: m.mentee.menteeProfile?.goals ?? null,
+      skills: m.mentee.menteeProfile?.desiredSkills ?? [],
+      tier: m.mentee.trustScore?.tier ?? "EMERGING",
+    })),
+    credits,
+    cashOutEligibility,
     trustScore: trustScore
-      ? { tier: trustScore.tier, totalScore: trustScore.totalScore }
-      : { tier: "EMERGING", totalScore: 0 },
+      ? { tier: trustScore.tier }
+      : { tier: "EMERGING" },
     strikeCount,
-    nationBuilding,
+    nationBuilding: { kpis: impact.kpis, composite: impact.composite },
     activeMentees,
     pendingRequests,
     pendingSessions: pendingSessions.map((s) => ({
@@ -82,6 +130,7 @@ export async function GET() {
         ? `${s.mentorship.mentee.profile.firstName} ${s.mentorship.mentee.profile.lastName}`
         : "Mentee",
       completedAt: s.completedAt,
+      outcome: s.outcome,
     })),
   });
 }

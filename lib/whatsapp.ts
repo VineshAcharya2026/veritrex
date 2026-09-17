@@ -24,12 +24,12 @@ export async function notifyReferrerHired(
 ) {
   await sendWhatsApp(
     phone,
-    `TrustHire: ${candidateName} was hired! Reward of ${formatCurrency(amount)} is now locked.`
+    `Veritrex: ${candidateName} was hired! Reward of ${formatCurrency(amount)} is now locked.`
   );
 }
 
 export async function notifyReferrerRewardReleased(phone: string, amount: number) {
-  await sendWhatsApp(phone, `TrustHire: ${formatCurrency(amount)} has been released to your account.`);
+  await sendWhatsApp(phone, `Veritrex: ${formatCurrency(amount)} has been released to your account.`);
 }
 
 export async function notifyEmployerMilestone(
@@ -39,6 +39,6 @@ export async function notifyEmployerMilestone(
 ) {
   await sendWhatsApp(
     phone,
-    `TrustHire: Please confirm Day ${dayMark} retention for ${candidateName}.`
+    `Veritrex: Please confirm Day ${dayMark} retention for ${candidateName}.`
   );
 }

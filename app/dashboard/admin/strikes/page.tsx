@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle } from "lucide-react";
@@ -37,8 +38,15 @@ export default function StrikesPage() {
         <div key={u.userId} className="rounded-xl border border-primary/8 bg-white p-5 shadow-card space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium text-primary">{u.name}</p>
-              <Badge>{u.role}</Badge>
+              <Link
+                href={`/dashboard/admin/users/${u.userId}`}
+                className="font-medium text-primary hover:underline"
+              >
+                {u.name}
+              </Link>
+              <div className="mt-1">
+                <Badge>{u.role}</Badge>
+              </div>
             </div>
             <span className="flex items-center gap-1 text-sm font-semibold text-red-600">
               <AlertTriangle className="h-4 w-4" />

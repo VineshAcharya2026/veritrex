@@ -12,7 +12,7 @@ export async function GET(
     include: {
       profile: true,
       menteeProfile: true,
-      trustScore: { select: { tier: true, totalScore: true } },
+      trustScore: { select: { tier: true } },
     },
   });
 
@@ -42,6 +42,5 @@ export async function GET(
     biggestChallenge: p.biggestChallenge,
     languages: p.languages,
     trustTier: trust?.tier ?? "EMERGING",
-    trustScore: trust?.totalScore ?? 0,
   });
 }

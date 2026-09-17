@@ -5,7 +5,7 @@ import { PageHeader, EmptyState } from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
-import type { Role } from "@prisma/client";
+import type { Role } from "@/lib/db/types";
 
 type LoginEvent = {
   id: string;

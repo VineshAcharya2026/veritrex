@@ -27,8 +27,57 @@ interface Hyperdrive {
   connectionString: string;
 }
 
+interface D1Database {
+  prepare(query: string): D1PreparedStatement;
+  batch<T = unknown>(statements: D1PreparedStatement[]): Promise<D1Result<T>[]>;
+  exec(query: string): Promise<D1ExecResult>;
+}
+
+interface D1PreparedStatement {
+  bind(...values: unknown[]): D1PreparedStatement;
+  first<T = unknown>(colName?: string): Promise<T | null>;
+  run(): Promise<D1Result>;
+  all<T = unknown>(): Promise<D1Result<T>>;
+}
+
+interface D1Result<T = unknown> {
+  success: boolean;
+  results?: T[];
+  meta?: { changes?: number; last_row_id?: number };
+}
+
+interface D1ExecResult {
+  count: number;
+  duration: number;
+}
+
+interface KVNamespaceGetOptions {
+  type?: "text" | "json" | "arrayBuffer" | "stream";
+}
+
+interface KVNamespacePutOptions {
+  expirationTtl?: number;
+  metadata?: Record<string, unknown>;
+}
+
+interface KVNamespace {
+  get(key: string, options?: KVNamespaceGetOptions): Promise<string | ArrayBuffer | ReadableStream | null>;
+  getWithMetadata(
+    key: string,
+    type: "arrayBuffer"
+  ): Promise<{ value: ArrayBuffer | null; metadata: Record<string, unknown> | null }>;
+  put(
+    key: string,
+    value: string | ArrayBuffer | ArrayBufferView | ReadableStream,
+    options?: KVNamespacePutOptions
+  ): Promise<void>;
+  delete(key: string): Promise<void>;
+}
+
 interface CloudflareEnv {
-  MENTOR_CONTENT: R2Bucket;
+  DB: D1Database;
+  AUTH_KV: KVNamespace;
+  MENTOR_CONTENT?: R2Bucket;
   HYPERDRIVE?: Hyperdrive;
   ASSETS: Fetcher;
   WORKER_SELF_REFERENCE: Fetcher;

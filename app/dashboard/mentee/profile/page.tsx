@@ -9,6 +9,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { ChevronLeft } from "lucide-react";
+import { CoverImageUploader } from "@/components/profile/CoverImageUploader";
+import { AvatarImageUploader } from "@/components/profile/AvatarImageUploader";
+import {
+  CURRENT_STATUS_OPTIONS,
+  QUALIFICATION_OPTIONS,
+  YEARS_OF_EXPERIENCE_OPTIONS,
+  GUIDANCE_OPTIONS,
+  MODE_OPTIONS,
+  LANGUAGE_OPTIONS,
+  INDUSTRY_OPTIONS,
+  COUNTRY_OPTIONS,
+} from "@/lib/mentee-onboarding";
+import { sanitizePhoneInput } from "@/lib/validators/phone";
 
 const SECTIONS = [
   "Basic Info",
@@ -17,14 +30,6 @@ const SECTIONS = [
   "Mentoring Preferences",
   "Personal",
 ] as const;
-
-const GUIDANCE_OPTIONS = [
-  "Career Confusion", "Interview Preparation", "Leadership", "Career Transition",
-  "Job Search", "Personal Branding", "Start-ups", "Higher Studies",
-  "Public Speaking", "Networking", "Salary Negotiation", "Workplace Conflicts",
-];
-
-const MODE_OPTIONS = ["VIDEO", "AUDIO", "CHAT", "GROUP", "ASYNC"];
 
 function CheckboxGroup({
   options,
@@ -64,10 +69,39 @@ function CheckboxGroup({
   );
 }
 
+function Select({
+  value,
+  onChange,
+  options,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+}) {
+  return (
+    <select
+      className="flex h-10 w-full rounded-sm border border-primary/15 bg-white px-3 text-sm"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    >
+      <option value="">Select</option>
+      {options.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+const asOptions = (values: string[]) => values.map((v) => ({ value: v, label: v }));
+
 type FormState = {
-  currentRole: string;
-  goals: string;
-  desiredSkills: string;
+  firstName: string;
+  lastName: string;
+  preferredName: string;
+  email: string;
+  phone: string;
   country: string;
   city: string;
   currentStatus: string;
@@ -78,20 +112,20 @@ type FormState = {
   preferredIndustry: string;
   careerGoal: string;
   guidanceAreas: string[];
-  skillsToDevelo: string[];
+  skillsToDevelo: string;
   preferredMentorProfile: string;
   preferredModes: string[];
-  languages: string;
+  languages: string[];
   biggestChallenge: string;
   successDefinition: string;
 };
 
 const defaultForm: FormState = {
-  currentRole: "", goals: "", desiredSkills: "", country: "", city: "",
-  currentStatus: "", highestQualification: "", currentInstitution: "",
-  currentDesignation: "", yearsOfExperience: "", preferredIndustry: "",
-  careerGoal: "", guidanceAreas: [], skillsToDevelo: [],
-  preferredMentorProfile: "", preferredModes: [], languages: "",
+  firstName: "", lastName: "", preferredName: "", email: "", phone: "",
+  country: "", city: "", currentStatus: "", highestQualification: "",
+  currentInstitution: "", currentDesignation: "", yearsOfExperience: "",
+  preferredIndustry: "", careerGoal: "", guidanceAreas: [], skillsToDevelo: "",
+  preferredMentorProfile: "", preferredModes: [], languages: [],
   biggestChallenge: "", successDefinition: "",
 };
 
@@ -101,58 +135,76 @@ export default function MenteeProfilePage() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
+  function load() {
     fetch("/api/mentee/profile")
       .then((r) => r.json())
       .then((p) => {
-        if (p?.id) {
-          setForm({
-            currentRole: p.currentRole || "",
-            goals: p.goals || "",
-            desiredSkills: (p.desiredSkills || []).join(", "),
-            country: p.country || "",
-            city: p.city || "",
-            currentStatus: p.currentStatus || "",
-            highestQualification: p.highestQualification || "",
-            currentInstitution: p.currentInstitution || "",
-            currentDesignation: p.currentDesignation || "",
-            yearsOfExperience: p.yearsOfExperience || "",
-            preferredIndustry: p.preferredIndustry || "",
-            careerGoal: p.careerGoal || "",
-            guidanceAreas: p.guidanceAreas || [],
-            skillsToDevelo: p.skillsToDevelo || [],
-            preferredMentorProfile: p.preferredMentorProfile || "",
-            preferredModes: p.preferredModes || [],
-            languages: (p.languages || []).join(", "),
-            biggestChallenge: p.biggestChallenge || "",
-            successDefinition: p.successDefinition || "",
-          });
-        }
+        setForm({
+          firstName: p.firstName || "",
+          lastName: p.lastName || "",
+          preferredName: p.preferredName || "",
+          email: p.email || "",
+          phone: p.phone || "",
+          country: p.country || "",
+          city: p.city || "",
+          currentStatus: p.currentStatus || "",
+          highestQualification: p.highestQualification || "",
+          currentInstitution: p.currentInstitution || "",
+          currentDesignation: p.currentDesignation || "",
+          yearsOfExperience: p.yearsOfExperience || "",
+          preferredIndustry: p.preferredIndustry || "",
+          careerGoal: p.careerGoal || "",
+          guidanceAreas: p.guidanceAreas || [],
+          skillsToDevelo: (p.skillsToDevelo || []).join(", "),
+          preferredMentorProfile: p.preferredMentorProfile || "",
+          preferredModes: p.preferredModes || [],
+          languages: p.languages || [],
+          biggestChallenge: p.biggestChallenge || "",
+          successDefinition: p.successDefinition || "",
+        });
       });
+  }
+
+  useEffect(() => {
+    load();
   }, []);
 
   async function save(e?: React.FormEvent) {
     e?.preventDefault();
-    setError(""); setSaved(false);
+    setError("");
+    setSaved(false);
     const res = await fetch("/api/mentee/profile", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...form,
+        firstName: form.firstName,
+        lastName: form.lastName,
+        preferredName: form.preferredName,
+        phone: form.phone,
+        country: form.country,
+        city: form.city,
         currentStatus: form.currentStatus || null,
-        languages: form.languages
-          ? form.languages.split(",").map((s) => s.trim()).filter(Boolean)
-          : undefined,
-        skillsToDevelo: form.skillsToDevelo.length > 0
-          ? form.skillsToDevelo
-          : form.desiredSkills
-            ? form.desiredSkills.split(",").map((s) => s.trim()).filter(Boolean)
-            : [],
+        highestQualification: form.highestQualification,
+        currentInstitution: form.currentInstitution,
+        currentDesignation: form.currentDesignation,
+        yearsOfExperience: form.yearsOfExperience,
+        preferredIndustry: form.preferredIndustry,
+        careerGoal: form.careerGoal,
+        guidanceAreas: form.guidanceAreas,
+        skillsToDevelo: form.skillsToDevelo
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean),
+        preferredMentorProfile: form.preferredMentorProfile,
+        preferredModes: form.preferredModes,
+        languages: form.languages,
+        biggestChallenge: form.biggestChallenge,
+        successDefinition: form.successDefinition,
       }),
     });
     if (!res.ok) {
-      const data = await res.json();
-      setError(data.error || "Failed to save");
+      const data = await res.json().catch(() => ({}));
+      setError(typeof data.error === "string" ? data.error : "Failed to save");
       return;
     }
     setSaved(true);
@@ -182,10 +234,43 @@ export default function MenteeProfilePage() {
       {section === 0 && (
         <form onSubmit={save} className="space-y-4 rounded-xl border border-primary/8 bg-white p-6 shadow-card">
           <h3 className="font-semibold text-primary">Basic Information</h3>
+          <AvatarImageUploader displayName={`${form.firstName} ${form.lastName}`.trim()} />
+          <CoverImageUploader />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>First name</Label>
+              <Input value={form.firstName} onChange={(e) => set("firstName", e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Last name</Label>
+              <Input value={form.lastName} onChange={(e) => set("lastName", e.target.value)} />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Preferred name</Label>
+            <Input value={form.preferredName} onChange={(e) => set("preferredName", e.target.value)} />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input value={form.email} disabled />
+            </div>
+            <div className="space-y-2">
+              <Label>Mobile number</Label>
+              <Input
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                value={form.phone}
+                placeholder="+919876543210"
+                onChange={(e) => set("phone", sanitizePhoneInput(e.target.value))}
+              />
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Country</Label>
-              <Input value={form.country} onChange={(e) => set("country", e.target.value)} />
+              <Select value={form.country} onChange={(v) => set("country", v)} options={asOptions(COUNTRY_OPTIONS)} />
             </div>
             <div className="space-y-2">
               <Label>City</Label>
@@ -194,20 +279,11 @@ export default function MenteeProfilePage() {
           </div>
           <div className="space-y-2">
             <Label>Current Status</Label>
-            <select className="flex h-10 w-full rounded-sm border border-primary/15 bg-white px-3 text-sm"
-              value={form.currentStatus} onChange={(e) => set("currentStatus", e.target.value)}>
-              <option value="">Select</option>
-              <option value="STUDENT">Student</option>
-              <option value="GRADUATE">Graduate</option>
-              <option value="PROFESSIONAL">Professional</option>
-              <option value="ENTREPRENEUR">Entrepreneur</option>
-              <option value="CAREER_BREAK">Career Break</option>
-              <option value="CAREER_SWITCHER">Career Switcher</option>
-            </select>
+            <Select value={form.currentStatus} onChange={(v) => set("currentStatus", v)} options={CURRENT_STATUS_OPTIONS} />
           </div>
           <div className="space-y-2">
-            <Label>Languages (comma-separated)</Label>
-            <Input value={form.languages} onChange={(e) => set("languages", e.target.value)} />
+            <Label>Languages</Label>
+            <CheckboxGroup options={LANGUAGE_OPTIONS} selected={form.languages} onChange={(v) => set("languages", v)} />
           </div>
           <div className="flex justify-end">
             <Button type="submit" variant="accent">Save &amp; continue</Button>
@@ -220,16 +296,8 @@ export default function MenteeProfilePage() {
           <h3 className="font-semibold text-primary">Education &amp; Work</h3>
           <div className="space-y-2">
             <Label>Highest Qualification</Label>
-            <select className="flex h-10 w-full rounded-sm border border-primary/15 bg-white px-3 text-sm"
-              value={form.highestQualification} onChange={(e) => set("highestQualification", e.target.value)}>
-              <option value="">Select</option>
-              <option value="High School">High School</option>
-              <option value="Diploma">Diploma</option>
-              <option value="Bachelor's">Bachelor&apos;s</option>
-              <option value="Master's">Master&apos;s</option>
-              <option value="PhD">PhD</option>
-              <option value="Other">Other</option>
-            </select>
+            <Select value={form.highestQualification} onChange={(v) => set("highestQualification", v)}
+              options={asOptions(QUALIFICATION_OPTIONS)} />
           </div>
           <div className="space-y-2">
             <Label>Current Institution / Organisation</Label>
@@ -239,21 +307,17 @@ export default function MenteeProfilePage() {
             <Label>Current Course / Designation</Label>
             <Input value={form.currentDesignation} onChange={(e) => set("currentDesignation", e.target.value)} />
           </div>
-          <div className="space-y-2">
-            <Label>Years of Experience</Label>
-            <select className="flex h-10 w-full rounded-sm border border-primary/15 bg-white px-3 text-sm"
-              value={form.yearsOfExperience} onChange={(e) => set("yearsOfExperience", e.target.value)}>
-              <option value="">Select</option>
-              <option value="Fresher">Fresher</option>
-              <option value="0-2">0-2</option>
-              <option value="3-5">3-5</option>
-              <option value="6-10">6-10</option>
-              <option value="10+">10+</option>
-            </select>
-          </div>
-          <div className="space-y-2">
-            <Label>Preferred Industry</Label>
-            <Input value={form.preferredIndustry} onChange={(e) => set("preferredIndustry", e.target.value)} />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Years of Experience</Label>
+              <Select value={form.yearsOfExperience} onChange={(v) => set("yearsOfExperience", v)}
+                options={asOptions(YEARS_OF_EXPERIENCE_OPTIONS)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Preferred Industry</Label>
+              <Select value={form.preferredIndustry} onChange={(v) => set("preferredIndustry", v)}
+                options={asOptions(INDUSTRY_OPTIONS)} />
+            </div>
           </div>
           <div className="flex justify-between">
             <Button type="button" variant="outline" onClick={() => setSection(0)}>
@@ -272,13 +336,13 @@ export default function MenteeProfilePage() {
             <Textarea value={form.careerGoal} rows={3} onChange={(e) => set("careerGoal", e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label>Areas where you seek guidance (max 5)</Label>
+            <Label>Areas where you seek guidance (up to 5)</Label>
             <CheckboxGroup options={GUIDANCE_OPTIONS} selected={form.guidanceAreas}
               onChange={(v) => set("guidanceAreas", v)} max={5} />
           </div>
           <div className="space-y-2">
-            <Label>Skills you want to develop (comma-separated, max 5)</Label>
-            <Input value={form.desiredSkills} onChange={(e) => set("desiredSkills", e.target.value)} />
+            <Label>Skills you want to develop (comma-separated, up to 5)</Label>
+            <Input value={form.skillsToDevelo} onChange={(e) => set("skillsToDevelo", e.target.value)} />
           </div>
           <div className="flex justify-between">
             <Button type="button" variant="outline" onClick={() => setSection(1)}>
@@ -293,8 +357,8 @@ export default function MenteeProfilePage() {
         <form onSubmit={save} className="space-y-4 rounded-xl border border-primary/8 bg-white p-6 shadow-card">
           <h3 className="font-semibold text-primary">Mentoring Preferences</h3>
           <div className="space-y-2">
-            <Label>Preferred mentor profile</Label>
-            <Textarea value={form.preferredMentorProfile} rows={3}
+            <Label>Preferred mentor profile (comma-separated)</Label>
+            <Input value={form.preferredMentorProfile}
               placeholder="Describe the kind of mentor you're looking for"
               onChange={(e) => set("preferredMentorProfile", e.target.value)} />
           </div>

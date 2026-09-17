@@ -1,9 +1,8 @@
-import type { Prisma } from "@prisma/client";
-
 export type MentorFilterParams = {
   q?: string;
   company?: string[];
   skills?: string[];
+  excludeUserId?: string;
 };
 
 export function parseListParam(value: string | null): string[] {
@@ -22,8 +21,12 @@ export function parseMentorFilters(searchParams: URLSearchParams): MentorFilterP
   };
 }
 
-export function buildMentorWhere(filters: MentorFilterParams): Prisma.UserWhereInput {
-  const and: Prisma.UserWhereInput[] = [{ role: "MENTOR", status: "ACTIVE" }];
+export function buildMentorWhere(filters: MentorFilterParams): Record<string, unknown> {
+  const and: Record<string, unknown>[] = [{ role: "MENTOR", status: "ACTIVE" }];
+
+  if (filters.excludeUserId) {
+    and.push({ id: { not: filters.excludeUserId } });
+  }
 
   if (filters.q) {
     and.push({

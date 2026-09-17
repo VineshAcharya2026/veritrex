@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { isRatingPeriodClosed, isRatingWindowOpen } from "@/lib/rating-engine";
 
 export async function GET(
   _req: Request,
@@ -14,8 +15,8 @@ export async function GET(
   const mentorshipSession = await prisma.mentorshipSession.findUnique({
     where: { id: sessionId },
     include: {
-      mentorship: { select: { mentorId: true, menteeId: true } },
-      ratings: true,
+      mentorship: true,
+      ratings: { select: { raterId: true } },
     },
   });
 
@@ -24,6 +25,9 @@ export async function GET(
   }
 
   const { mentorship, ratings } = mentorshipSession;
+  if (!mentorship) {
+    return NextResponse.json({ error: "Mentorship not found for session" }, { status: 404 });
+  }
   const isMentor = session.user.id === mentorship.mentorId;
   const isMentee = session.user.id === mentorship.menteeId;
 
@@ -31,32 +35,19 @@ export async function GET(
     return NextResponse.json({ error: "Not your session" }, { status: 403 });
   }
 
-  const bothSubmitted = ratings.length >= 2;
-  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  const sessionOldEnough =
-    mentorshipSession.completedAt &&
-    mentorshipSession.completedAt <= twentyFourHoursAgo;
-
-  const canReveal = bothSubmitted || sessionOldEnough;
-
+  const ratingPeriodClosed = isRatingPeriodClosed({
+    completedAt: mentorshipSession.completedAt,
+    ratings,
+  });
   const myRating = ratings.find((r) => r.raterId === session.user.id);
   const otherRating = ratings.find((r) => r.raterId !== session.user.id);
+  const ratingWindowOpen = isRatingWindowOpen(mentorshipSession.completedAt);
 
+  // Raw session scores are never exposed — only submission status.
   return NextResponse.json({
     myRatingSubmitted: !!myRating,
     otherRatingSubmitted: !!otherRating,
-    canReveal,
-    myRating: myRating
-      ? {
-          weightedScore: myRating.weightedScore,
-          raterRole: myRating.raterRole,
-        }
-      : null,
-    receivedRating: canReveal && otherRating
-      ? {
-          weightedScore: otherRating.weightedScore,
-          raterRole: otherRating.raterRole,
-        }
-      : null,
+    ratingPeriodClosed,
+    ratingWindowClosed: !ratingWindowOpen,
   });
 }

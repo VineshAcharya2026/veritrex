@@ -22,7 +22,10 @@ export default function ConfigPage() {
     });
   }
 
-  const fields = [{ key: "default_max_mentees", label: "Default max mentees per mentor" }];
+  const fields = [
+    { key: "default_max_mentees", label: "Default max mentees per mentor" },
+    { key: "free_mentorship_hours_cap", label: "Free/concessional mentorship hours cap per mentor" },
+  ];
 
   return (
     <div className="space-y-6">

@@ -1,8 +1,12 @@
 "$schema" = "./node_modules/wrangler/config-schema.json"
 name = "tursthire"
-main = ".open-next/worker.js"
+main = "custom-worker.ts"
 compatibility_date = "2025-04-01"
 compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
+
+[triggers]
+# Daily 03:00 UTC — runs markUnilateral → trust recalc → cheat detection
+crons = ["0 3 * * *"]
 
 [assets]
 directory = ".open-next/assets"
@@ -11,6 +15,16 @@ binding = "ASSETS"
 [[services]]
 binding = "WORKER_SELF_REFERENCE"
 service = "tursthire"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "trusthire-db"
+database_id = "6ec30083-9d59-4c19-a034-2a81cf961fe3"
+migrations_dir = "db/migrations"
+
+[[kv_namespaces]]
+binding = "AUTH_KV"
+id = "9ef1d560efe34b7cacbca0167ad88d24"
 
 # Mentor profile media — enable R2 in Cloudflare Dashboard first, then uncomment:
 # [[r2_buckets]]
@@ -29,3 +43,6 @@ service = "tursthire"
 
 [observability]
 enabled = true
+
+# Cron: custom-worker.ts scheduled() → GET /api/cron (Bearer $CRON_SECRET)
+# Also callable manually / via admin "Run integrity jobs" — see README.md

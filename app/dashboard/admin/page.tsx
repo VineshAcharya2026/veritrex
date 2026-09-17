@@ -3,12 +3,14 @@ import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { StatCard } from "@/components/charts/StatCard";
-import { Users, GraduationCap, LogIn, Clock } from "lucide-react";
+import { Users, GraduationCap, LogIn, Clock, Star, Flag, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default async function AdminDashboardPage() {
   const session = await getSession();
   if (!session || session.user.role !== "SUPER_ADMIN") redirect("/login");
+
+  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
 
   const [
     totalUsers,
@@ -17,6 +19,9 @@ export default async function AdminDashboardPage() {
     activeMentorships,
     pendingMentorships,
     totalLogins,
+    openCheatFlags,
+    sessionRatings,
+    strikeEvents,
   ] = await Promise.all([
     prisma.user.count({ where: { status: { not: "DELETED" } } }),
     prisma.user.count({ where: { role: "MENTOR", status: "ACTIVE" } }),
@@ -24,6 +29,9 @@ export default async function AdminDashboardPage() {
     prisma.mentorship.count({ where: { status: "ACTIVE" } }),
     prisma.mentorship.count({ where: { status: "PENDING" } }),
     prisma.loginEvent.count(),
+    prisma.cheatFlag.count({ where: { reviewed: false } }),
+    prisma.sessionRating.count(),
+    prisma.reliabilityStrike.count({ where: { createdAt: { gte: ninetyDaysAgo } } }),
   ]);
 
   const recentMentorships = await prisma.mentorship.findMany({
@@ -40,11 +48,16 @@ export default async function AdminDashboardPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-primary">Super Admin</h1>
-          <p className="mt-1 text-sm text-muted">Platform overview and mentorship activity</p>
+          <p className="mt-1 text-sm text-muted">Platform overview, mentorship activity, and rating integrity</p>
         </div>
-        <Button variant="accent" asChild>
-          <Link href="/dashboard/admin/users">Manage users</Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/dashboard/admin/ratings">Ratings & Trust</Link>
+          </Button>
+          <Button variant="accent" asChild>
+            <Link href="/dashboard/admin/users">Manage users</Link>
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -54,6 +67,20 @@ export default async function AdminDashboardPage() {
         <StatCard label="Active mentorships" value={activeMentorships} icon={GraduationCap} />
         <StatCard label="Pending requests" value={pendingMentorships} icon={Clock} />
         <StatCard label="Total logins" value={totalLogins} icon={LogIn} />
+      </div>
+
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-semibold text-primary">Ratings & Trust</h2>
+          <Link href="/dashboard/admin/ratings" className="text-sm text-accent hover:underline">
+            Open hub
+          </Link>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <StatCard label="Private session ratings" value={sessionRatings} icon={Star} />
+          <StatCard label="Open cheat flags" value={openCheatFlags} icon={Flag} />
+          <StatCard label="Strikes (90d)" value={strikeEvents} icon={AlertTriangle} />
+        </div>
       </div>
 
       <div className="rounded-xl border border-primary/8 bg-white p-5 shadow-card">

@@ -1,28 +1,21 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
   computeMenteeRatesMentorScore,
   computeMentorRatesMenteeScore,
+  finalizeSessionRatings,
+  isRatingWindowOpen,
 } from "@/lib/rating-engine";
+import {
+  menteeRatesMentorSchema,
+  mentorRatesMenteeSchema,
+} from "@/lib/rating-questionnaire";
 
-const dim = z.number().int().min(1).max(5);
-
-const menteeRatesMentorSchema = z.object({
-  knowledge: dim,
-  actionability: dim,
-  preparation: dim,
-  clarity: dim,
-  responsiveness: dim,
-});
-
-const mentorRatesMenteeSchema = z.object({
-  goalClarity: dim,
-  menteePreparation: dim,
-  engagement: dim,
-  followThrough: dim,
-});
+function apiError(error: unknown, fallback: string) {
+  if (typeof error === "string") return error;
+  return fallback;
+}
 
 export async function POST(
   request: Request,
@@ -37,7 +30,7 @@ export async function POST(
     where: { id: sessionId },
     include: {
       mentorship: { select: { mentorId: true, menteeId: true } },
-      ratings: { select: { raterId: true } },
+      ratings: { select: { raterId: true, id: true } },
     },
   });
 
@@ -48,6 +41,13 @@ export async function POST(
   if (mentorshipSession.outcome !== "COMPLETED") {
     return NextResponse.json(
       { error: "Can only rate completed sessions" },
+      { status: 400 }
+    );
+  }
+
+  if (!isRatingWindowOpen(mentorshipSession.completedAt)) {
+    return NextResponse.json(
+      { error: "The rating window for this session has closed (7 days)." },
       { status: 400 }
     );
   }
@@ -72,50 +72,66 @@ export async function POST(
   if (isMentee) {
     const parsed = menteeRatesMentorSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+      return NextResponse.json(
+        { error: apiError(parsed.error.message, "Invalid rating answers") },
+        { status: 400 }
+      );
     }
 
     const weightedScore = computeMenteeRatesMentorScore(parsed.data);
-
     const rating = await prisma.sessionRating.create({
       data: {
         sessionId,
         raterId: session.user.id,
         ratedUserId: mentorship.mentorId,
         raterRole: "MENTEE",
-        knowledge: parsed.data.knowledge,
-        actionability: parsed.data.actionability,
-        preparation: parsed.data.preparation,
-        clarity: parsed.data.clarity,
-        responsiveness: parsed.data.responsiveness,
+        impact: parsed.data.impact,
+        productivity: parsed.data.productivity,
+        goalAchievement: parsed.data.goalAchievement,
+        realisticLearningPath: parsed.data.realisticLearningPath,
+        approach: parsed.data.approach,
+        mannersRespect: parsed.data.mannersRespect,
         weightedScore,
       },
     });
 
-    return NextResponse.json({ id: rating.id, weightedScore }, { status: 201 });
+    await finalizeSessionRatings(sessionId, mentorshipSession.completedAt, [
+      mentorship.mentorId,
+      mentorship.menteeId,
+    ]);
+
+    return NextResponse.json({ id: rating.id, submitted: true }, { status: 201 });
   }
 
-  // Mentor rates mentee
   const parsed = mentorRatesMenteeSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json(
+      { error: apiError(parsed.error.message, "Invalid rating answers") },
+      { status: 400 }
+    );
   }
 
   const weightedScore = computeMentorRatesMenteeScore(parsed.data);
-
   const rating = await prisma.sessionRating.create({
     data: {
       sessionId,
       raterId: session.user.id,
       ratedUserId: mentorship.menteeId,
       raterRole: "MENTOR",
-      goalClarity: parsed.data.goalClarity,
-      menteePreparation: parsed.data.menteePreparation,
-      engagement: parsed.data.engagement,
-      followThrough: parsed.data.followThrough,
+      preparedness: parsed.data.preparedness,
+      taskCompletion: parsed.data.taskCompletion,
+      sessionGoals: parsed.data.sessionGoals,
+      implementation: parsed.data.implementation,
+      growth: parsed.data.growth,
+      respectBehavior: parsed.data.respectBehavior,
       weightedScore,
     },
   });
 
-  return NextResponse.json({ id: rating.id, weightedScore }, { status: 201 });
+  await finalizeSessionRatings(sessionId, mentorshipSession.completedAt, [
+    mentorship.mentorId,
+    mentorship.menteeId,
+  ]);
+
+  return NextResponse.json({ id: rating.id, submitted: true }, { status: 201 });
 }

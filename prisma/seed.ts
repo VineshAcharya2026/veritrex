@@ -22,10 +22,10 @@ async function main() {
   });
 
   await prisma.user.upsert({
-    where: { email: "superadmin@trusthire.com" },
+    where: { email: "superadmin@veritra.com" },
     update: { role: "SUPER_ADMIN", status: "ACTIVE" },
     create: {
-      email: "superadmin@trusthire.com",
+      email: "superadmin@veritra.com",
       passwordHash: hash,
       role: "SUPER_ADMIN",
       status: "ACTIVE",
@@ -34,10 +34,10 @@ async function main() {
   });
 
   const mentor = await prisma.user.upsert({
-    where: { email: "mentor@trusthire.com" },
+    where: { email: "mentor@veritra.com" },
     update: { role: "MENTOR", status: "ACTIVE" },
     create: {
-      email: "mentor@trusthire.com",
+      email: "mentor@veritra.com",
       phone: "+919876543210",
       passwordHash: hash,
       role: "MENTOR",
@@ -89,10 +89,10 @@ async function main() {
   }
 
   const mentee = await prisma.user.upsert({
-    where: { email: "mentee@trusthire.com" },
+    where: { email: "mentee@veritra.com" },
     update: { role: "MENTEE", status: "ACTIVE" },
     create: {
-      email: "mentee@trusthire.com",
+      email: "mentee@veritra.com",
       phone: "+919876543211",
       passwordHash: hash,
       role: "MENTEE",
@@ -118,9 +118,9 @@ async function main() {
   }
 
   console.log("Seed complete.");
-  console.log("Super Admin: superadmin@trusthire.com / Password123!");
-  console.log("Mentor: mentor@trusthire.com / Password123!");
-  console.log("Mentee: mentee@trusthire.com / Password123!");
+  console.log("Super Admin: superadmin@veritra.com / Password123!");
+  console.log("Mentor: mentor@veritra.com / Password123!");
+  console.log("Mentee: mentee@veritra.com / Password123!");
 }
 
 main()

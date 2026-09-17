@@ -3,13 +3,24 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
+import { LogoWordmark } from "@/components/ui/Logo";
+import { BRAND } from "@/lib/brand";
+import { RegisterFormFields } from "@/components/auth/RegisterFormFields";
+import { formatApiError } from "@/lib/api-errors";
+import {
+  mapZodFieldErrors,
+  registerSchema,
+  type RegisterFormValues,
+} from "@/lib/validators/auth";
+import { formatPhoneForApi } from "@/lib/validators/phone";
+import { REGISTER_DEFAULT_VALUES } from "@/lib/validators/register-form";
 
-type RegisterRole = "MENTOR" | "MENTEE";
+type RegisterRole = RegisterFormValues["role"];
 
 const ROLES: { id: RegisterRole; label: string }[] = [
   { id: "MENTOR", label: "Mentor" },
@@ -38,56 +49,63 @@ export default function RegisterPage() {
 function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [role, setRole] = useState<RegisterRole>("MENTEE");
-  const [form, setForm] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    password: "",
-    companyName: "",
-    title: "",
-    expertise: "",
-    currentRole: "",
-    goals: "",
-    desiredSkills: "",
-  });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    setRole(parseRoleParam(searchParams.get("role")));
-    setForm((prev) => ({
-      ...prev,
-      firstName: searchParams.get("firstName")?.trim() || prev.firstName,
-      lastName: searchParams.get("lastName")?.trim() || prev.lastName,
-      email: searchParams.get("email")?.trim() || prev.email,
-    }));
-  }, [searchParams]);
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    setError: setFieldError,
+    watch,
+    reset,
+    formState: { errors },
+  } = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+    mode: "onTouched",
+    defaultValues: REGISTER_DEFAULT_VALUES,
+  });
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
+  const role = watch("role");
+
+  useEffect(() => {
+    reset({
+      ...REGISTER_DEFAULT_VALUES,
+      role: parseRoleParam(searchParams.get("role")),
+      firstName: searchParams.get("firstName")?.trim() || "",
+      lastName: searchParams.get("lastName")?.trim() || "",
+      email: searchParams.get("email")?.trim() || "",
+    });
+  }, [searchParams, reset]);
+
+  async function onSubmit(values: RegisterFormValues) {
     setError("");
+    setLoading(true);
 
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, role }),
+      body: JSON.stringify({
+        ...values,
+        phone: formatPhoneForApi(values.phone),
+      }),
     });
 
     const data = await res.json();
     setLoading(false);
 
     if (!res.ok) {
-      const msg =
-        typeof data.error === "string"
-          ? data.error
-          : data.error?.formErrors?.[0] ??
-            data.error?.fieldErrors?.email?.[0] ??
-            data.error?.fieldErrors?.password?.[0] ??
-            "Registration failed";
-      setError(msg);
+      const fieldErrorsFromApi = data.error?.fieldErrors as
+        | Record<string, string[] | undefined>
+        | undefined;
+      if (fieldErrorsFromApi) {
+        const mapped = mapZodFieldErrors({ fieldErrors: fieldErrorsFromApi });
+        for (const [key, message] of Object.entries(mapped)) {
+          setFieldError(key as keyof RegisterFormValues, { message });
+        }
+        if (Object.keys(mapped).length) return;
+      }
+      setError(formatApiError(data.error, "Registration failed"));
       return;
     }
 
@@ -97,17 +115,20 @@ function RegisterForm() {
   return (
     <div className="flex min-h-screen auth-bg items-center justify-center px-4 py-12">
       <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-white/10 bg-white shadow-2xl animate-fade-in">
-        <div className="h-1.5 bg-gradient-to-r from-primary via-accent to-primary" />
+        <div className="h-1.5 bg-gradient-to-r from-landing-teal via-landing-gold to-landing-teal" />
         <div className="p-8">
+          <LogoWordmark height={36} className="mb-4" priority />
           <h2 className="text-2xl font-bold text-primary">Create your account</h2>
-          <p className="mt-1 text-sm text-muted">Join TrustHire as a mentor or mentee</p>
+          <p className="mt-1 text-sm text-muted">Join {BRAND.name} as a mentor or mentee</p>
 
           <div className="mb-6 mt-6 grid grid-cols-2 gap-2">
             {ROLES.map((r) => (
               <button
                 key={r.id}
                 type="button"
-                onClick={() => setRole(r.id)}
+                onClick={() =>
+                  setValue("role", r.id, { shouldValidate: true, shouldTouch: true })
+                }
                 className={cn(
                   "rounded-md border px-3 py-2.5 text-sm font-medium transition-all duration-200",
                   role === r.id
@@ -120,65 +141,14 @@ function RegisterForm() {
             ))}
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
             {error && <Alert variant="error">{error}</Alert>}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>First name</Label>
-                <Input value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} required />
-              </div>
-              <div className="space-y-2">
-                <Label>Last name</Label>
-                <Input value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} required />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Email</Label>
-              <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
-            </div>
-            <div className="space-y-2">
-              <Label>Phone</Label>
-              <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-            </div>
-
-            {role === "MENTOR" && (
-              <>
-                <div className="space-y-2">
-                  <Label>Company</Label>
-                  <Input value={form.companyName} onChange={(e) => setForm({ ...form, companyName: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Title</Label>
-                  <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Expertise (comma-separated)</Label>
-                  <Input value={form.expertise} onChange={(e) => setForm({ ...form, expertise: e.target.value })} placeholder="React, Leadership" />
-                </div>
-              </>
-            )}
-
-            {role === "MENTEE" && (
-              <>
-                <div className="space-y-2">
-                  <Label>Current role</Label>
-                  <Input value={form.currentRole} onChange={(e) => setForm({ ...form, currentRole: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Goals</Label>
-                  <Input value={form.goals} onChange={(e) => setForm({ ...form, goals: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Desired skills (comma-separated)</Label>
-                  <Input value={form.desiredSkills} onChange={(e) => setForm({ ...form, desiredSkills: e.target.value })} placeholder="TypeScript, System Design" />
-                </div>
-              </>
-            )}
-
-            <div className="space-y-2">
-              <Label>Password</Label>
-              <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required minLength={8} />
-            </div>
+            <RegisterFormFields
+              register={register}
+              errors={errors}
+              role={role}
+              setValue={setValue}
+            />
             <Button type="submit" className="w-full" variant="accent" disabled={loading}>
               {loading ? "Creating account..." : "Create account"}
             </Button>

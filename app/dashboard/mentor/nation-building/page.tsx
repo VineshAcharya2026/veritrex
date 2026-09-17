@@ -1,163 +1,145 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { FileText, Plus, Trophy } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Alert } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
+import { ImpactScoreHeader } from "@/components/nation-building/ImpactScoreHeader";
+import { NationBuildingBadgeRow } from "@/components/nation-building/NationBuildingBadgeRow";
+import { NationBuildingSectionCard } from "@/components/nation-building/NationBuildingSectionCard";
+import { ImpactStoryCard } from "@/components/nation-building/ImpactStoryCard";
+import { ContributionForm } from "@/components/nation-building/ContributionForm";
+import { NATION_BUILDING_CATEGORIES, MAX_IMPACT_STORIES } from "@/lib/nation-building";
+import type {
+  ImpactKpisDTO,
+  NationBuildingEntryDTO,
+  SectionSummaryDTO,
+} from "@/lib/nation-building";
+import type { NationBuildingBadge, NationBuildingCategory } from "@/lib/db/types";
 
-const OUTCOME_TYPES = [
-  { value: "PLACED", label: "Placed in new role" },
-  { value: "PROMOTED", label: "Promoted" },
-  { value: "STARTED_VENTURE", label: "Started own venture" },
-  { value: "CHANGED_INDUSTRY", label: "Changed industry" },
-  { value: "CHANGED_JOB", label: "Changed job" },
-] as const;
-
-type Outcome = {
-  id: string;
-  outcomeType: string;
-  city: string | null;
-  industry: string | null;
-  verified: boolean;
-  mentorship: { mentee: { profile?: { firstName: string; lastName: string } } };
+type NationBuildingData = {
+  kpis: ImpactKpisDTO;
+  composite: number;
+  sections: SectionSummaryDTO[];
+  entries: NationBuildingEntryDTO[];
+  badges: { badge: NationBuildingBadge; earnedAt: string }[];
 };
 
-type Mentorship = {
-  id: string;
-  mentee: { profile?: { firstName: string; lastName: string } };
-};
+const NON_STORY_CATEGORIES = NATION_BUILDING_CATEGORIES.filter(
+  (c) => c.category !== "IMPACT_STORY"
+);
 
 export default function NationBuildingPage() {
-  const [outcomes, setOutcomes] = useState<Outcome[]>([]);
-  const [mentorships, setMentorships] = useState<Mentorship[]>([]);
-  const [form, setForm] = useState({
-    mentorshipId: "",
-    outcomeType: "PLACED",
-    city: "",
-    industry: "",
-    notes: "",
-  });
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState("");
+  const [data, setData] = useState<NationBuildingData | null>(null);
+  const [addingStory, setAddingStory] = useState(false);
 
-  function load() {
-    fetch("/api/mentor/outcomes")
+  const load = useCallback(() => {
+    fetch("/api/mentor/nation-building")
       .then((r) => r.json())
-      .then((data) => {
-        setOutcomes(data.outcomes ?? []);
-        setMentorships(data.mentorships ?? []);
-      });
-  }
+      .then(setData);
+  }, []);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setSaved(false);
-    const res = await fetch("/api/mentor/outcomes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setError(data.error || "Failed to log outcome");
-      return;
-    }
-    setSaved(true);
-    setForm({ mentorshipId: "", outcomeType: "PLACED", city: "", industry: "", notes: "" });
-    load();
+  if (!data) {
+    return <div className="h-64 animate-pulse rounded-xl bg-primary/5" />;
   }
 
+  const entriesByCategory = (category: NationBuildingCategory) =>
+    data.entries.filter((e) => e.category === category);
+  const summaryFor = (category: NationBuildingCategory) =>
+    data.sections.find((s) => s.category === category) ?? {
+      category,
+      verifiedCount: 0,
+      verifiedQuantity: 0,
+      pendingCount: 0,
+    };
+
+  const stories = entriesByCategory("IMPACT_STORY");
+
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <PageHeader
-        title="Nation building"
-        description="Log impact outcomes from your mentorship. Verified outcomes earn credits and boost your thought leadership score."
-      />
-      {saved && <Alert variant="success">Outcome logged. Pending admin verification.</Alert>}
-      {error && <Alert variant="error">{error}</Alert>}
+    <div className="mx-auto max-w-5xl space-y-8">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <PageHeader
+          title="Impact Score"
+          description="Track the verified social impact you create. Verified contributions grow your Impact Score, earn badges, and feature you on the public leaderboard."
+        />
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/dashboard/mentor/nation-building/report">
+              <FileText className="mr-1 h-4 w-4" /> Annual report
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/leaderboard">
+              <Trophy className="mr-1 h-4 w-4" /> Leaderboard
+            </Link>
+          </Button>
+        </div>
+      </div>
 
-      <form onSubmit={submit} className="space-y-4 rounded-xl border border-primary/8 bg-white p-6 shadow-card">
-        <div className="space-y-2">
-          <Label>Mentorship</Label>
-          <select
-            className="flex h-10 w-full rounded-sm border border-primary/15 bg-white px-3 text-sm"
-            value={form.mentorshipId}
-            onChange={(e) => setForm({ ...form, mentorshipId: e.target.value })}
-            required
-          >
-            <option value="">Select mentee</option>
-            {mentorships.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.mentee.profile
-                  ? `${m.mentee.profile.firstName} ${m.mentee.profile.lastName}`
-                  : m.id}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="space-y-2">
-          <Label>Outcome type</Label>
-          <select
-            className="flex h-10 w-full rounded-sm border border-primary/15 bg-white px-3 text-sm"
-            value={form.outcomeType}
-            onChange={(e) => setForm({ ...form, outcomeType: e.target.value })}
-          >
-            {OUTCOME_TYPES.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>City</Label>
-            <Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
-          </div>
-          <div className="space-y-2">
-            <Label>Industry</Label>
-            <Input value={form.industry} onChange={(e) => setForm({ ...form, industry: e.target.value })} />
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label>Notes</Label>
-          <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} />
-        </div>
-        <Button type="submit" variant="accent">
-          Log outcome
-        </Button>
-      </form>
+      <ImpactScoreHeader kpis={data.kpis} composite={data.composite} />
 
-      {outcomes.length > 0 && (
-        <div className="rounded-xl border border-primary/8 bg-white p-5 shadow-card">
-          <h2 className="mb-4 font-semibold text-primary">Logged outcomes</h2>
-          <ul className="space-y-3">
-            {outcomes.map((o) => (
-              <li key={o.id} className="flex items-center justify-between text-sm">
-                <span>
-                  {o.mentorship.mentee.profile
-                    ? `${o.mentorship.mentee.profile.firstName} ${o.mentorship.mentee.profile.lastName}`
-                    : "Mentee"}{" "}
-                  — {o.outcomeType.replace(/_/g, " ").toLowerCase()}
-                  {o.city ? ` · ${o.city}` : ""}
-                </span>
-                <Badge variant={o.verified ? "accent" : "default"}>
-                  {o.verified ? "Verified" : "Pending"}
-                </Badge>
-              </li>
-            ))}
-          </ul>
+      <NationBuildingBadgeRow earned={data.badges.map((b) => b.badge)} />
+
+      <div>
+        <h2 className="mb-3 font-semibold text-primary">Contributions</h2>
+        <div className="grid gap-4 md:grid-cols-2">
+          {NON_STORY_CATEGORIES.map(({ category }) => (
+            <NationBuildingSectionCard
+              key={category}
+              category={category}
+              summary={summaryFor(category)}
+              entries={entriesByCategory(category)}
+              onChanged={load}
+            />
+          ))}
         </div>
-      )}
+      </div>
+
+      <div>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div>
+            <h2 className="font-semibold text-primary">Impact stories</h2>
+            <p className="text-xs text-muted">
+              Up to {MAX_IMPACT_STORIES} stories with photos, documents and testimonials.
+            </p>
+          </div>
+          {!addingStory && stories.length < MAX_IMPACT_STORIES && (
+            <Button size="sm" variant="accent" onClick={() => setAddingStory(true)}>
+              <Plus className="mr-1 h-3.5 w-3.5" /> Add story
+            </Button>
+          )}
+        </div>
+
+        {addingStory && (
+          <div className="mb-4">
+            <ContributionForm
+              category="IMPACT_STORY"
+              onSaved={() => {
+                setAddingStory(false);
+                load();
+              }}
+              onCancel={() => setAddingStory(false)}
+            />
+          </div>
+        )}
+
+        {stories.length === 0 ? (
+          <p className="rounded-xl border border-primary/8 bg-white p-5 text-sm text-muted shadow-card">
+            No impact stories yet. Share a memorable moment from your mentoring journey.
+          </p>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {stories.map((story) => (
+              <ImpactStoryCard key={story.id} story={story} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

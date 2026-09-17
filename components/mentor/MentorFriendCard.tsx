@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EliteFounderBadge } from "@/components/mentor/EliteFounderBadge";
@@ -28,7 +29,13 @@ export function MentorFriendCard({ mentor, score, reasons }: MentorCardProps) {
     <div className="rounded-xl border border-primary/8 bg-white p-5 shadow-card">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="font-semibold text-primary">{name}</h3>
+          {mentor.userId ? (
+            <Link href={`/mentor/${mentor.userId}`} className="font-semibold text-primary hover:underline">
+              {name}
+            </Link>
+          ) : (
+            <h3 className="font-semibold text-primary">{name}</h3>
+          )}
           <p className="text-sm text-muted">
             {mentor.title}
             {mentor.company ? ` at ${mentor.company}` : ""}
@@ -58,15 +65,22 @@ export function MentorFriendCard({ mentor, score, reasons }: MentorCardProps) {
         <p className="mt-3 text-xs text-muted">{reasons.join(" · ")}</p>
       )}
 
-      {mentor.linkedInUrl && (
-        <Button variant="outline" size="sm" className="mt-4 gap-1" asChild>
-          <a href={mentor.linkedInUrl} target="_blank" rel="noopener noreferrer">
-            <Linkedin className="h-3 w-3" />
-            LinkedIn
-            <ExternalLink className="h-3 w-3" />
-          </a>
-        </Button>
-      )}
+      <div className="mt-4 flex flex-wrap gap-2">
+        {mentor.userId && (
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/mentor/${mentor.userId}`}>View profile</Link>
+          </Button>
+        )}
+        {mentor.linkedInUrl && (
+          <Button variant="outline" size="sm" className="gap-1" asChild>
+            <a href={mentor.linkedInUrl} target="_blank" rel="noopener noreferrer">
+              <Linkedin className="h-3 w-3" />
+              LinkedIn
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

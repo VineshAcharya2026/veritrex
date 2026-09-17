@@ -1,6 +1,38 @@
-import type { CreditType, Prisma } from "@prisma/client";
+import type { CreditType } from "@/lib/db/types";
+import type { DbClient } from "@/lib/db/orm";
 import { prisma } from "@/lib/prisma";
 import { recalculateThoughtLeadershipScore } from "@/lib/mentor-scores";
+import { getCashOutEligibility } from "@/lib/rating-engine";
+
+export class CashOutNotEligibleError extends Error {
+  constructor(
+    message: string,
+    public readonly details: {
+      realSessions: number;
+      requiredSessions: number;
+      hasOpenFlags: boolean;
+    }
+  ) {
+    super(message);
+    this.name = "CashOutNotEligibleError";
+  }
+}
+
+/** Call before any future credit redemption / payout API. */
+export async function assertCashOutEligible(mentorUserId: string) {
+  const eligibility = await getCashOutEligibility(mentorUserId);
+  if (!eligibility.eligible) {
+    const message = eligibility.hasOpenFlags
+      ? "Credit cash-out is paused while a rating review is open on your account."
+      : `Complete ${eligibility.requiredSessions - eligibility.realSessions} more bilateral, unflagged rated sessions to unlock cash-out.`;
+    throw new CashOutNotEligibleError(message, {
+      realSessions: eligibility.realSessions,
+      requiredSessions: eligibility.requiredSessions,
+      hasOpenFlags: eligibility.hasOpenFlags,
+    });
+  }
+  return eligibility;
+}
 
 export const CREDIT_AMOUNTS = {
   MENTORSHIP_COMPLETED: 10,
@@ -11,7 +43,7 @@ export const CREDIT_AMOUNTS = {
   CONTENT_PUBLISHED: 2,
 } as const;
 
-type Tx = Prisma.TransactionClient;
+type Tx = DbClient;
 
 async function getMentorProfileId(mentorUserId: string, tx: Tx = prisma) {
   const profile = await tx.mentorProfile.findUnique({

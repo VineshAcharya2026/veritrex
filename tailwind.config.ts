@@ -10,13 +10,21 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Core brand palette, sampled from the Veritra logo artwork:
+        // deep navy field, teal checkmark, amber/gold arrow tip.
         primary: {
-          DEFAULT: "#0F172A",
-          foreground: "#F8FAFC",
+          DEFAULT: "#000000",
+          foreground: "#FFFFFF",
         },
         accent: {
-          DEFAULT: "#2563EB",
+          DEFAULT: "#14B8A6",
           foreground: "#FFFFFF",
+        },
+        gold: {
+          DEFAULT: "#FBBF24",
+          dark: "#F59E0B",
+          light: "#FEF3C7",
+          foreground: "#0A1628",
         },
         surface: "#F8FAFC",
         success: "#2D6A4F",
@@ -36,10 +44,15 @@ const config: Config = {
           foreground: "hsl(var(--card-foreground))",
         },
         landing: {
-          blue: "#2563EB",
-          blueDark: "#1D4ED8",
-          blueLight: "#EFF6FF",
-          navy: "#0F172A",
+          black: "#000000",
+          teal: "#14B8A6",
+          tealDark: "#0F9488",
+          tealLight: "#EFFCFA",
+          mint: "#5EEAD4",
+          gold: "#FBBF24",
+          goldDark: "#F59E0B",
+          goldLight: "#FEF3C7",
+          navy: "#000000",
         },
       },
       borderRadius: {
@@ -48,9 +61,9 @@ const config: Config = {
         sm: "4px",
       },
       boxShadow: {
-        card: "0 1px 3px 0 rgb(37 99 235 / 0.06), 0 1px 2px -1px rgb(15 23 42 / 0.06)",
-        "card-hover": "0 4px 12px 0 rgb(37 99 235 / 0.1), 0 2px 4px -2px rgb(15 23 42 / 0.06)",
-        subtle: "0 1px 2px 0 rgb(37 99 235 / 0.04)",
+        card: "0 1px 3px 0 rgb(20 184 166 / 0.08), 0 1px 2px -1px rgb(10 22 40 / 0.06)",
+        "card-hover": "0 4px 12px 0 rgb(20 184 166 / 0.12), 0 2px 4px -2px rgb(10 22 40 / 0.06)",
+        subtle: "0 1px 2px 0 rgb(10 22 40 / 0.06)",
       },
       fontFamily: {
         sans: ["var(--font-inter)", "Inter", "system-ui", "sans-serif"],

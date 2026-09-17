@@ -4,14 +4,16 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { StarDimensionInput } from "./StarDimensionInput";
+import {
+  MENTEE_RATES_MENTOR_DIMENSIONS,
+  formatWeightPercent,
+  type MenteeRatesMentorKey,
+} from "@/lib/rating-questionnaire";
 
-const DIMENSIONS = [
-  { key: "knowledge", label: "Knowledge / Advice quality", weight: "30%" },
-  { key: "actionability", label: "How useful / actionable", weight: "25%" },
-  { key: "preparation", label: "Mentor came prepared", weight: "20%" },
-  { key: "clarity", label: "Easy to understand", weight: "15%" },
-  { key: "responsiveness", label: "On time / responsive", weight: "10%" },
-] as const;
+function formatApiError(error: unknown, fallback: string) {
+  if (typeof error === "string") return error;
+  return fallback;
+}
 
 export function MenteeRatesMentorForm({
   sessionId,
@@ -22,9 +24,12 @@ export function MenteeRatesMentorForm({
   mentorName: string;
   onSubmitted: () => void;
 }) {
-  const [scores, setScores] = useState<Record<string, number>>({
-    knowledge: 0, actionability: 0, preparation: 0, clarity: 0, responsiveness: 0,
-  });
+  const [scores, setScores] = useState(
+    () =>
+      Object.fromEntries(
+        MENTEE_RATES_MENTOR_DIMENSIONS.map((d) => [d.key, 0])
+      ) as Record<MenteeRatesMentorKey, number>
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -34,33 +39,39 @@ export function MenteeRatesMentorForm({
     if (!allFilled) return;
     setSubmitting(true);
     setError("");
-    const res = await fetch(`/api/sessions/${sessionId}/rate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(scores),
-    });
-    setSubmitting(false);
-    if (!res.ok) {
-      const data = await res.json();
-      setError(data.error || "Failed to submit rating");
-      return;
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}/rate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(scores),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(formatApiError(data.error, "Failed to submit rating"));
+        return;
+      }
+      onSubmitted();
+    } catch {
+      setError("Network error — could not submit rating");
+    } finally {
+      setSubmitting(false);
     }
-    onSubmitted();
   }
 
   return (
     <div className="space-y-4">
       <h3 className="font-semibold text-primary">Rate your mentor: {mentorName}</h3>
       <p className="text-sm text-muted">
-        Your rating is private and will not be shown to your mentor directly.
+        Six weighted questions. Your answers are private and will not be shown to your mentor
+        directly — only your TrustScore tier is public.
       </p>
       {error && <Alert variant="error">{error}</Alert>}
       <div className="space-y-4 rounded-xl border border-primary/8 bg-white p-5">
-        {DIMENSIONS.map((d) => (
+        {MENTEE_RATES_MENTOR_DIMENSIONS.map((d) => (
           <StarDimensionInput
             key={d.key}
             label={d.label}
-            weight={d.weight}
+            weight={formatWeightPercent(d.weight)}
             value={scores[d.key]}
             onChange={(v) => setScores({ ...scores, [d.key]: v })}
           />

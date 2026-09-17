@@ -1,4 +1,4 @@
-import type { SeniorityLevel } from "@prisma/client";
+import type { SeniorityLevel } from "@/lib/db/types";
 
 type MentorMatchInput = {
   id: string;

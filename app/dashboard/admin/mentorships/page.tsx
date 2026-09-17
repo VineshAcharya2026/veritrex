@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/badge";
 
@@ -8,8 +9,10 @@ type Mentorship = {
   id: string;
   status: string;
   message?: string;
-  mentor: { email: string; profile?: { firstName: string; lastName: string }; mentorProfile?: { company?: string; title?: string } };
-  mentee: { email: string; profile?: { firstName: string; lastName: string } };
+  mentorId: string;
+  menteeId: string;
+  mentor: { id: string; email: string; profile?: { firstName: string; lastName: string }; mentorProfile?: { company?: string; title?: string } };
+  mentee: { id: string; email: string; profile?: { firstName: string; lastName: string } };
 };
 
 export default function AdminMentorshipsPage() {
@@ -28,9 +31,19 @@ export default function AdminMentorshipsPage() {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <p className="font-semibold text-primary">
-                  {m.mentor.profile ? `${m.mentor.profile.firstName} ${m.mentor.profile.lastName}` : m.mentor.email}
+                  <Link
+                    href={`/dashboard/admin/users/${m.mentorId || m.mentor.id}`}
+                    className="hover:underline"
+                  >
+                    {m.mentor.profile ? `${m.mentor.profile.firstName} ${m.mentor.profile.lastName}` : m.mentor.email}
+                  </Link>
                   {" → "}
-                  {m.mentee.profile ? `${m.mentee.profile.firstName} ${m.mentee.profile.lastName}` : m.mentee.email}
+                  <Link
+                    href={`/dashboard/admin/users/${m.menteeId || m.mentee.id}`}
+                    className="hover:underline"
+                  >
+                    {m.mentee.profile ? `${m.mentee.profile.firstName} ${m.mentee.profile.lastName}` : m.mentee.email}
+                  </Link>
                 </p>
                 {m.mentor.mentorProfile?.company && (
                   <p className="text-sm text-muted">{m.mentor.mentorProfile.company}</p>

@@ -1,12 +1,17 @@
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import type { Role } from "@prisma/client";
-import { authOptions } from "@/lib/auth-options";
+import type { Role, UserStatus } from "@/lib/db/types";
+import { getSession } from "@/lib/auth/session";
 
-export { authOptions };
+export { getSession };
 
-export async function getSession() {
-  return getServerSession(authOptions);
+export interface AuthSession {
+  user: {
+    id: string;
+    email: string;
+    role: Role;
+    status: UserStatus;
+    name?: string | null;
+  };
 }
 
 export async function requireAuth() {
@@ -14,7 +19,7 @@ export async function requireAuth() {
   if (!session?.user) {
     return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }), session: null };
   }
-  return { error: null, session };
+  return { error: null, session: session as AuthSession };
 }
 
 export async function requireRole(roles: Role | Role[]) {
@@ -41,15 +46,4 @@ export async function requireSuperAdmin() {
   return requireRole("SUPER_ADMIN");
 }
 
-export function dashboardPathForRole(role: Role): string {
-  switch (role) {
-    case "SUPER_ADMIN":
-      return "/dashboard/admin";
-    case "MENTOR":
-      return "/dashboard/mentor";
-    case "MENTEE":
-      return "/dashboard/mentee";
-    default:
-      return "/";
-  }
-}
+export { dashboardPathForRole } from "@/lib/auth/dashboard";

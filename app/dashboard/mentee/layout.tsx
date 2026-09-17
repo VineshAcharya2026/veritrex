@@ -1,12 +1,13 @@
 "use client";
 
-import { DashboardShell } from "@/components/layout/DashboardShell";
+import { SocialDashboardShell } from "@/components/layout/SocialDashboardShell";
+import { SocialPageFrame } from "@/components/layout/SocialPageFrame";
 import { menteeNav } from "@/lib/nav";
 
 export default function MenteeLayout({ children }: { children: React.ReactNode }) {
   return (
-    <DashboardShell navItems={menteeNav} title="Mentee">
-      {children}
-    </DashboardShell>
+    <SocialDashboardShell navItems={menteeNav}>
+      <SocialPageFrame role="MENTEE">{children}</SocialPageFrame>
+    </SocialDashboardShell>
   );
 }

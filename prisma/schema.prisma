@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
+  engineType = "client"
 }
 
 datasource db {
@@ -27,8 +28,19 @@ model User {
   memberReflection MemberReflection?
   ratingsGiven     SessionRating[]     @relation("RaterUser")
   ratingsReceived  SessionRating[]     @relation("RatedUser")
+  endorsementsGiven    UserEndorsement[] @relation("Endorser")
+  endorsementsReceived UserEndorsement[] @relation("Endorsed")
   trustScore       TrustScoreRecord?
   strikes          ReliabilityStrike[]
+  feedPosts        FeedPost[]
+  feedLikes        FeedLike[]
+  feedComments     FeedComment[]
+  feedBookmarks    FeedBookmark[]
+  messageThreadsA  MessageThread[] @relation("ThreadParticipantA")
+  messageThreadsB  MessageThread[] @relation("ThreadParticipantB")
+  messagesSent     Message[]
+  nationBuildingEntries NationBuildingEntry[]
+  nationBuildingBadges  MentorNationBuildingBadge[]
 }
 
 enum LeadershipLoneliness {
@@ -95,13 +107,15 @@ enum MentorshipStatus {
 }
 
 model Profile {
-  id        String  @id @default(cuid())
-  userId    String  @unique
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  firstName String
-  lastName  String
-  avatar    String?
-  bio       String?
+  id            String  @id @default(cuid())
+  userId        String  @unique
+  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName     String
+  lastName      String
+  preferredName String?
+  avatar        String?
+  coverImage    String?
+  bio           String?
 }
 
 enum SeniorityLevel {
@@ -128,11 +142,54 @@ enum OutcomeType {
   CHANGED_JOB
 }
 
+enum NationBuildingCategory {
+  FREE_MENTORING
+  UNDERPRIVILEGED_MENTEES
+  CAREER_GROWTH
+  JOBS_REFERRALS
+  STARTUP_SUCCESS
+  GROUP_MENTORING
+  MASTERCLASSES
+  COMMUNITY_SERVICE
+  VOLUNTEER_HOURS
+  IMPACT_STORY
+}
+
+enum NationBuildingSource {
+  MANUAL
+  PLATFORM
+}
+
+enum NationBuildingBadge {
+  COMMUNITY_MENTOR
+  CAREER_CATALYST
+  STARTUP_ENABLER
+  EDUCATION_CHAMPION
+  OPPORTUNITY_CREATOR
+  NATION_BUILDER
+}
+
 enum ContentType {
   POST
   PODCAST
   VIDEO
   IMAGE
+}
+
+enum ReactionType {
+  LIKE
+  CELEBRATE
+  SUPPORT
+  LOVE
+  INSIGHTFUL
+}
+
+enum ReactionType {
+  LIKE
+  CELEBRATE
+  SUPPORT
+  LOVE
+  INSIGHTFUL
 }
 
 enum InnerCircleStatus {
@@ -146,6 +203,7 @@ enum SessionOutcome {
   MENTOR_NO_SHOW
   MENTEE_NO_SHOW
   MUTUAL_CANCEL
+  LATE_CANCEL
 }
 
 enum TrustTier {
@@ -195,6 +253,7 @@ model MentorProfile {
   thoughtLeadershipScore Int             @default(0)
   creditsBalance         Int             @default(0)
   offersFreeMentorship   Boolean         @default(false)
+  freeMentorshipMinutesUsed Int          @default(0)
 
   // Phase 1 questionnaire fields
   professionalHeadline   String?           @db.VarChar(120)
@@ -250,6 +309,7 @@ model MenteeProfile {
   languages              String[]             @default([])
   biggestChallenge       String?              @db.Text
   successDefinition      String?              @db.Text
+  linkedInUrl            String?
 }
 
 model Mentorship {
@@ -279,6 +339,7 @@ model MentorshipSession {
   completedAt     DateTime?
   outcome         SessionOutcome?
   outcomeLoggedBy String?
+  durationMinutes Int?
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
   ratings         SessionRating[]
@@ -296,17 +357,20 @@ model SessionRating {
   raterRole   Role
 
   // Mentee-rates-mentor dimensions (null when mentor rates mentee)
-  knowledge      Int?
-  actionability  Int?
-  preparation    Int?
-  clarity        Int?
-  responsiveness Int?
+  impact                Int?
+  productivity          Int?
+  goalAchievement       Int?
+  realisticLearningPath Int?
+  approach              Int?
+  mannersRespect        Int?
 
   // Mentor-rates-mentee dimensions (null when mentee rates mentor)
-  goalClarity       Int?
-  menteePreparation Int?
-  engagement        Int?
-  followThrough     Int?
+  preparedness     Int?
+  taskCompletion   Int?
+  sessionGoals     Int?
+  implementation   Int?
+  growth           Int?
+  respectBehavior  Int?
 
   weightedScore Float
   isUnilateral  Boolean  @default(false)
@@ -354,6 +418,18 @@ model CheatFlag {
   adminNotes     String?  @db.Text
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+}
+
+model UserEndorsement {
+  id         String   @id @default(cuid())
+  endorserId String
+  endorser   User     @relation("Endorser", fields: [endorserId], references: [id], onDelete: Cascade)
+  endorsedId String
+  endorsed   User     @relation("Endorsed", fields: [endorsedId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([endorserId, endorsedId])
+  @@index([endorsedId])
 }
 
 model MentorSkill {
@@ -406,6 +482,44 @@ model MentorshipOutcome {
   updatedAt    DateTime    @updatedAt
 }
 
+model NationBuildingEntry {
+  id           String                 @id @default(cuid())
+  mentorId     String
+  mentor       User                   @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  category     NationBuildingCategory
+  title        String
+  description  String?                @db.Text
+  quantity     Int                    @default(0)
+  eventDate    DateTime?
+  location     String?
+  testimonial  String?                @db.Text
+  evidenceUrls String[]               @default([])
+  mentorshipId String?
+  source       NationBuildingSource   @default(MANUAL)
+  externalRef  String?
+  verified     Boolean                @default(false)
+  verifiedAt   DateTime?
+  verifiedBy   String?
+  adminNotes   String?                @db.Text
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+
+  @@index([mentorId])
+  @@index([category])
+  @@unique([mentorId, source, externalRef])
+}
+
+model MentorNationBuildingBadge {
+  id       String              @id @default(cuid())
+  mentorId String
+  mentor   User                @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  badge    NationBuildingBadge
+  earnedAt DateTime            @default(now())
+
+  @@unique([mentorId, badge])
+  @@index([mentorId])
+}
+
 model MentorContent {
   id          String        @id @default(cuid())
   mentorId    String
@@ -419,6 +533,92 @@ model MentorContent {
   fileSize    Int?
   publishedAt DateTime      @default(now())
   createdAt   DateTime      @default(now())
+}
+
+model FeedPost {
+  id         String      @id @default(cuid())
+  authorId   String
+  author     User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  type       ContentType
+  title      String
+  body       String?     @db.Text
+  mediaUrl   String?
+  storageKey String?
+  mimeType   String?
+  fileSize   Int?
+  createdAt  DateTime    @default(now())
+  likes      FeedLike[]
+  comments   FeedComment[]
+  bookmarks  FeedBookmark[]
+
+  @@index([createdAt])
+  @@index([authorId])
+}
+
+model FeedBookmark {
+  id        String   @id @default(cuid())
+  postId    String
+  post      FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+  @@index([userId])
+}
+
+model MessageThread {
+  id             String    @id @default(cuid())
+  participantAId String
+  participantA   User      @relation("ThreadParticipantA", fields: [participantAId], references: [id], onDelete: Cascade)
+  participantBId String
+  participantB   User      @relation("ThreadParticipantB", fields: [participantBId], references: [id], onDelete: Cascade)
+  lastMessageAt  DateTime  @default(now())
+  createdAt      DateTime  @default(now())
+  messages       Message[]
+
+  @@index([participantAId])
+  @@index([participantBId])
+}
+
+model Message {
+  id        String        @id @default(cuid())
+  threadId  String
+  thread    MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  senderId  String
+  sender    User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  body      String        @db.Text
+  readAt    DateTime?
+  createdAt DateTime      @default(now())
+
+  @@index([threadId])
+  @@index([threadId, createdAt])
+}
+
+model FeedLike {
+  id        String       @id @default(cuid())
+  postId    String
+  post      FeedPost     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reaction  ReactionType @default(LIKE)
+  createdAt DateTime     @default(now())
+
+  @@unique([postId, userId])
+  @@index([userId])
+}
+
+model FeedComment {
+  id        String   @id @default(cuid())
+  postId    String
+  post      FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([postId])
+  @@index([createdAt])
 }
 
 model InnerCircleApplication {

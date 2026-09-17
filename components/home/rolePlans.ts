@@ -1,6 +1,8 @@
 import { GraduationCap, Target, type LucideIcon } from "lucide-react";
+import { BRAND } from "@/lib/brand";
 
 export type RolePlanId = "MENTOR" | "MENTEE";
+export type RolePlanTheme = "teal" | "gold";
 
 export type RolePlan = {
   id: RolePlanId;
@@ -11,6 +13,7 @@ export type RolePlan = {
   features: string[];
   steps: string[];
   icon: LucideIcon;
+  theme: RolePlanTheme;
   accentClass: string;
 };
 
@@ -18,48 +21,54 @@ export const ROLE_PLANS: RolePlan[] = [
   {
     id: "MENTOR",
     title: "Mentor",
-    headline: "Share expertise. Guide the next generation.",
+    headline: "Forge legacy. Earn credibility. Shape careers.",
     summary:
-      "Create a mentor profile, accept mentee requests, and help others grow through structured mentorship.",
-    highlights: ["Build profile", "Accept requests", "Guide mentees"],
+      `Build your ${BRAND.name} mentor profile, guide mentees through structured sessions, earn credits, and contribute to impact with up to 5 free hours per cycle.`,
+    highlights: ["Earn credits", "Build TrustScore", "Nation building"],
     features: [
-      "Set your company, title, and areas of expertise",
-      "Control how many mentees you take on",
-      "Review and accept or reject mentorship requests",
-      "Track active mentees from your dashboard",
-      "Notifications when mentees reach out",
+      "Showcase skills, mastery levels, and professional portfolio evidence",
+      "Earn credits for completed mentorships, content, and verified outcomes",
+      "Offer up to 5 hours of free/concessional nation-building mentorship",
+      "Access Find Friends for peer matching by industry, seniority, and interests",
+      "Apply for the exclusive Inner Circle and Elite Founder 100 recognition",
+      "Track thought leadership score, mentee ratings, and platform performance",
+      "Publish posts, podcasts, videos, and pictures on your public profile",
     ],
     steps: [
-      "Register as a Mentor",
-      "Complete your profile with expertise and experience",
-      "Review incoming mentorship requests",
-      "Guide mentees toward their career goals",
+      `Register as a Mentor on ${BRAND.name}`,
+      "Complete your profile with expertise, LinkedIn, and skills",
+      "Accept mentorship requests and complete bilateral-rated sessions",
+      "Earn credits, log nation-building outcomes, and cash out when eligible",
     ],
     icon: GraduationCap,
-    accentClass: "from-landing-blue to-landing-blueDark",
+    theme: "teal",
+    accentClass: "from-landing-teal to-landing-tealDark",
   },
   {
     id: "MENTEE",
     title: "Mentee",
-    headline: "Find mentors. Set goals. Grow your career.",
+    headline: "Find mentors. Build proof. Elevate your career.",
     summary:
-      "Browse mentors by skills and company, send mentorship requests, and track your learning goals.",
-    highlights: ["Find mentors", "Set goals", "Get guidance"],
+      "Discover mentors without network prerequisites, set clear goals, rate sessions bilaterally, and build a LinkedIn-style credibility profile recruiters can trust.",
+    highlights: ["Smart matching", "TrustScore growth", "Career proof"],
     features: [
-      "Search mentors by expertise and company",
-      "Send personalized mentorship requests",
-      "Define your current role, goals, and desired skills",
-      "Track active and pending mentorships",
-      "Notifications when mentors respond",
+      "Search mentors by expertise, industry, company, and guidance areas",
+      "Structured mentorship journeys with session outcomes and ratings",
+      "Build a LinkedIn-format public profile with goals and portfolio evidence",
+      "Grow your TrustScore through accountable session feedback",
+      "Connect with peers through the networking directory",
+      "Browse mentor podcasts, posts, and thought leadership on the community feed",
+      "Access referral hiring pathways as the programme expands",
     ],
     steps: [
-      "Register as a Mentee",
-      "Set your career goals and desired skills",
-      "Browse mentors and send requests",
-      "Work with your mentor on your growth plan",
+      `Register as a Mentee on ${BRAND.name}`,
+      "Set career goals, skills to develop, and preferred mentor profile",
+      "Browse mentors and send thoughtful requests",
+      "Complete sessions, submit ratings, and build verified career proof",
     ],
     icon: Target,
-    accentClass: "from-landing-blueDark to-landing-blue",
+    theme: "gold",
+    accentClass: "from-landing-gold to-landing-goldDark",
   },
 ];
 

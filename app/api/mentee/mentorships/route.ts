@@ -3,6 +3,8 @@ import { z } from "zod";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notifications";
+import { isMenteeOnboardingComplete } from "@/lib/mentee-onboarding";
+import { zodErrorMessage } from "@/lib/api-errors";
 
 const requestSchema = z.object({
   mentorId: z.string().min(1),
@@ -31,7 +33,27 @@ export async function POST(request: Request) {
   const body = await request.json();
   const parsed = requestSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json({ error: zodErrorMessage(parsed.error.flatten()) }, { status: 400 });
+  }
+
+  const [menteeProfile, userProfile, account] = await Promise.all([
+    prisma.menteeProfile.findUnique({ where: { userId: session.user.id } }),
+    prisma.profile.findUnique({ where: { userId: session.user.id } }),
+    prisma.user.findUnique({ where: { id: session.user.id } }),
+  ]);
+
+  if (
+    !isMenteeOnboardingComplete({
+      firstName: userProfile?.firstName,
+      lastName: userProfile?.lastName,
+      phone: account?.phone,
+      ...(menteeProfile ?? {}),
+    })
+  ) {
+    return NextResponse.json(
+      { error: "Complete your onboarding profile before requesting a mentor." },
+      { status: 403 }
+    );
   }
 
   const mentor = await prisma.user.findFirst({

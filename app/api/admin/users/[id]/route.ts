@@ -6,11 +6,12 @@ import { logAudit } from "@/lib/audit";
 import { getClientIp } from "@/lib/utils";
 import { parseSkillInput } from "@/lib/skills";
 import { z } from "zod";
+import { optionalPhoneSchema } from "@/lib/validators/phone";
 
 const updateUserSchema = z.object({
   firstName: z.string().min(1).optional(),
   lastName: z.string().min(1).optional(),
-  phone: z.string().optional().nullable(),
+  phone: optionalPhoneSchema,
   role: z.enum(["MENTOR", "MENTEE"]).optional(),
   status: z.enum(["ACTIVE", "PENDING", "SUSPENDED", "FROZEN", "DELETED"]).optional(),
   password: z.string().min(8).optional(),

@@ -20,7 +20,7 @@ async function send(to: string, subject: string, html: string) {
     return;
   }
   await transporter.sendMail({
-    from: process.env.EMAIL_FROM || "TrustHire <noreply@trusthire.com>",
+    from: process.env.EMAIL_FROM || "Veritrex <info@veritrex.com>",
     to,
     subject,
     html,
@@ -40,7 +40,7 @@ export async function sendReferralConfirmation(
   await send(
     candidateEmail,
     `You've been referred for ${jobTitle}`,
-    `<p>A referrer has submitted your profile for <strong>${jobTitle}</strong> on TrustHire.</p>`
+    `<p>A referrer has submitted your profile for <strong>${jobTitle}</strong> on Veritrex.</p>`
   );
 }
 
@@ -98,4 +98,20 @@ export async function sendAdminAlert(subject: string, body: string) {
     return;
   }
   await send(adminEmail, subject, `<p>${body}</p>`);
+}
+
+export async function sendRegistrationConfirmation(email: string, firstName: string) {
+  await send(
+    email,
+    `Welcome to ${process.env.BRAND_NAME || "Veritrex"}`,
+    `<p>Hi ${firstName},</p><p>Your ${process.env.BRAND_NAME || "Veritrex"} account is ready. Sign in anytime to complete your profile and start connecting.</p>`
+  );
+}
+
+export async function sendPasswordResetEmail(email: string, resetUrl: string) {
+  await send(
+    email,
+    "Reset your password",
+    `<p>We received a request to reset your password.</p><p><a href="${resetUrl}">Click here to choose a new password</a>. This link expires in one hour.</p><p>If you did not request this, you can ignore this email.</p>`
+  );
 }

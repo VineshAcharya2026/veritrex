@@ -6,13 +6,14 @@ import { logAudit } from "@/lib/audit";
 import { getClientIp } from "@/lib/utils";
 import { parseSkillInput } from "@/lib/skills";
 import { z } from "zod";
+import { optionalPhoneSchema } from "@/lib/validators/phone";
 
 const createUserSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
   firstName: z.string().min(1),
   lastName: z.string().min(1),
-  phone: z.string().optional(),
+  phone: optionalPhoneSchema,
   role: z.enum(["MENTOR", "MENTEE"]),
   companyName: z.string().optional(),
   title: z.string().optional(),

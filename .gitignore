@@ -15,3 +15,6 @@ coverage/
 .wrangler
 .dev.vars
 !.dev.vars.example
+
+public/uploads/**
+!public/uploads/.gitkeep

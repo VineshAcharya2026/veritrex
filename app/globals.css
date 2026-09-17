@@ -5,12 +5,12 @@
 @layer base {
   :root {
     --background: 210 40% 98%;
-    --foreground: 222 47% 11%;
+    --foreground: 218 65% 9%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 218 65% 9%;
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 217 91% 60%;
+    --ring: 173 80% 36%;
   }
 
   * {
@@ -35,24 +35,34 @@
   .dashboard-bg {
     background-color: #F8FAFC;
     background-image:
-      radial-gradient(at 0% 0%, rgb(37 99 235 / 0.07) 0, transparent 50%),
-      radial-gradient(at 100% 100%, rgb(15 23 42 / 0.04) 0, transparent 50%);
+      radial-gradient(at 0% 0%, rgb(20 184 166 / 0.07) 0, transparent 50%),
+      radial-gradient(at 100% 100%, rgb(10 22 40 / 0.04) 0, transparent 50%);
   }
 
   .auth-bg {
-    background-color: #0F172A;
+    background-color: #000000;
     background-image:
-      radial-gradient(at 20% 20%, rgb(37 99 235 / 0.25) 0, transparent 40%),
-      radial-gradient(at 80% 80%, rgb(59 130 246 / 0.12) 0, transparent 40%),
-      linear-gradient(135deg, #0F172A 0%, #1E3A8A 50%, #0F172A 100%);
+      radial-gradient(at 15% 15%, rgb(20 184 166 / 0.22) 0, transparent 42%),
+      radial-gradient(at 85% 25%, rgb(251 191 36 / 0.12) 0, transparent 38%),
+      radial-gradient(at 80% 85%, rgb(20 184 166 / 0.1) 0, transparent 42%),
+      linear-gradient(160deg, #000000 0%, #000000 100%);
   }
 
   .landing-hero-gradient {
-    background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 45%, #3B82F6 100%);
+    background:
+      radial-gradient(at 85% 10%, rgb(251 191 36 / 0.3) 0, transparent 38%),
+      linear-gradient(135deg, #000000 0%, #0a2a28 50%, #0F9488 100%);
     clip-path: polygon(0 0, 100% 0, 100% 92%, 0 100%);
   }
 
   .landing-section-alt {
-    background-color: #EFF6FF;
+    background-color: #EFFCFA;
+  }
+
+  .brand-glow {
+    background:
+      radial-gradient(at 20% 20%, rgb(20 184 166 / 0.35) 0, transparent 45%),
+      radial-gradient(at 85% 80%, rgb(251 191 36 / 0.3) 0, transparent 45%),
+      #0A1628;
   }
 }

@@ -4,6 +4,8 @@ import { requireSuperAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { awardCreditsAndRecalculate, CREDIT_AMOUNTS } from "@/lib/credits";
 import { recalculateThoughtLeadershipScore } from "@/lib/mentor-scores";
+import { syncPlatformNationBuildingEntries } from "@/lib/nation-building-sync";
+import { recalculateNationBuildingBadges } from "@/lib/nation-building-badges";
 
 const schema = z.object({
   verified: z.boolean(),
@@ -46,6 +48,10 @@ export async function PATCH(
   } else {
     await recalculateThoughtLeadershipScore(existing.mentorId);
   }
+
+  // Mirror the verified outcome into the nation-building impact system.
+  await syncPlatformNationBuildingEntries(existing.mentorId);
+  await recalculateNationBuildingBadges(existing.mentorId);
 
   return NextResponse.json(outcome);
 }

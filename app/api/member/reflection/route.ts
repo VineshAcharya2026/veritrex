@@ -1,12 +1,36 @@
 import { NextResponse } from "next/server";
-import type { GentleCommitment, LeadershipLoneliness, Prisma } from "@prisma/client";
+import type { GentleCommitment, LeadershipLoneliness } from "@/lib/db/types";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { reflectionDraftSchema, validateReflectionSubmit } from "@/lib/validators/reflection";
 
+type ReflectionWriteData = {
+  introduction?: string;
+  proudestAchievement?: string;
+  guidingValues?: string;
+  standFor?: string;
+  admiredPerson?: string;
+  meaningPurpose?: string;
+  dreamMission?: string;
+  societalAspiration?: string;
+  othersDescribeYou?: string;
+  valuedQualities?: string[];
+  energizingPeople?: string;
+  differentBeliefsApproach?: string;
+  confidentialityImportance?: number;
+  supportWays?: string[];
+  contributions?: string;
+  leadershipLoneliness?: LeadershipLoneliness;
+  supportNeeded?: string;
+  sharingTopics?: string;
+  rememberedFor?: string;
+  additionalNotes?: string;
+  gentleCommitment?: GentleCommitment;
+};
+
 function toReflectionData(
   fields: Omit<ReturnType<typeof reflectionDraftSchema.parse>, "submit">
-): Omit<Prisma.MemberReflectionUncheckedCreateInput, "userId"> {
+): ReflectionWriteData {
   return {
     introduction: fields.introduction,
     proudestAchievement: fields.proudestAchievement,

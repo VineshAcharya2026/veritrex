@@ -1,14 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/alert";
-import { Briefcase, Shield, Users } from "lucide-react";
+import { Shield, Users } from "lucide-react";
+import { BRAND } from "@/lib/brand";
+import { LogoLockup, LogoWordmark } from "@/components/ui/Logo";
+import { dashboardPathForRole } from "@/lib/auth/dashboard";
+import type { Role } from "@/lib/db/types";
 
 const ERROR_MESSAGES: Record<string, string> = {
   PENDING_APPROVAL: "Your account is pending admin approval.",
@@ -16,6 +19,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   ACCOUNT_FROZEN: "Your account is frozen. Contact support.",
   ACCOUNT_DELETED: "This account no longer exists.",
   CredentialsSignin: "Invalid email or password.",
+  "Invalid email or password": "Invalid email or password.",
 };
 
 export default function LoginPage() {
@@ -30,90 +34,71 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ email, password }),
     });
 
+    const body = await res.json().catch(() => ({}));
     setLoading(false);
 
-    if (!result?.ok) {
-      setError(ERROR_MESSAGES[result?.error ?? ""] || "Login failed. Please try again.");
+    if (!res.ok) {
+      const code = body.error ?? "Login failed";
+      setError(ERROR_MESSAGES[code] || code || "Login failed. Please try again.");
       return;
     }
 
-    if (result?.error) {
-      setError(ERROR_MESSAGES[result.error] || "Login failed. Please try again.");
-      return;
-    }
-
-    const res = await fetch("/api/auth/session");
-    const session = await res.json();
-    const role = session?.user?.role;
-    const status = session?.user?.status;
+    const role = body.user?.role;
+    const status = body.user?.status;
 
     if (status === "PENDING") {
       router.push("/pending-approval");
       return;
     }
 
-    await fetch("/api/auth/login-log", { method: "POST" });
+    await fetch("/api/auth/login-log", { method: "POST", credentials: "include" });
 
-    const paths: Record<string, string> = {
-      SUPER_ADMIN: "/dashboard/admin",
-      MENTOR: "/dashboard/mentor",
-      MENTEE: "/dashboard/mentee",
-    };
-    router.push(paths[role] || "/");
+    router.push(role ? dashboardPathForRole(role as Role) : "/");
   }
 
   return (
     <div className="flex min-h-screen auth-bg">
       <div className="hidden flex-1 flex-col justify-between p-12 text-white lg:flex">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent shadow-card">
-            <Briefcase className="h-5 w-5 text-white" />
-          </div>
-          <span className="text-xl font-bold tracking-tight">TrustHire</span>
-        </div>
+        <LogoLockup height={72} rounded="rounded-2xl" shadowed priority />
         <div className="max-w-md space-y-6">
           <h1 className="text-4xl font-bold leading-tight tracking-tight">
-            Grow through mentorship
+            {BRAND.tagline}
           </h1>
-          <p className="text-lg text-white/70">
-            Connect mentors and mentees. Set goals, find guidance, and track mentorship journeys.
-          </p>
+          <p className="text-lg text-white/70">{BRAND.description}</p>
           <div className="space-y-4 pt-4">
             {[
-              { icon: Users, text: "Expert mentor network" },
-              { icon: Shield, text: "Super admin oversight" },
+              { icon: Users, text: "Structured Mentor-Mentee Marketplace" },
+              { icon: Shield, text: "TrustScore Engine with blind bilateral ratings" },
             ].map(({ icon: Icon, text }) => (
               <div key={text} className="flex items-center gap-3 text-white/80">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10">
-                  <Icon className="h-4 w-4 text-accent" />
+                  <Icon className="h-4 w-4 text-landing-mint" />
                 </div>
                 {text}
               </div>
             ))}
           </div>
         </div>
-        <p className="text-sm text-white/40">© TrustHire · Mentorship platform</p>
+        <p className="text-sm text-white/40">
+          © {BRAND.name} · {BRAND.city}
+        </p>
       </div>
 
       <div className="flex flex-1 items-center justify-center bg-surface px-4 py-12 lg:rounded-l-[2rem]">
         <div className="w-full max-w-md animate-fade-in">
           <div className="mb-8 lg:hidden">
-            <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent">
-                <Briefcase className="h-4 w-4 text-white" />
-              </div>
-              <span className="font-bold text-primary">TrustHire</span>
-            </div>
+            <LogoWordmark height={36} priority />
           </div>
 
           <h2 className="text-2xl font-bold text-primary">Welcome back</h2>
-          <p className="mt-1 text-sm text-muted">Sign in to your account</p>
+          <p className="mt-1 text-sm text-muted">Sign in to your {BRAND.name} account</p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-4">
             {error && <Alert variant="error">{error}</Alert>}
@@ -129,7 +114,12 @@ export default function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                <Link href="/forgot-password" className="text-xs font-medium text-accent hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
               <Input
                 id="password"
                 type="password"

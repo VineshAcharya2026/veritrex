@@ -7,6 +7,5 @@ export async function POST() {
   if (error) return error;
 
   const processed = await batchRecalculateTrustScores();
-
   return NextResponse.json({ processed });
 }

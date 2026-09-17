@@ -4,6 +4,31 @@ import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { parseSkillInput } from "@/lib/skills";
 
+function formatZodError(error: z.ZodError): string {
+  const flat = error.flatten();
+  const parts = [
+    ...flat.formErrors,
+    ...Object.entries(flat.fieldErrors).flatMap(([k, v]) =>
+      (v ?? []).map((m) => `${k}: ${m}`)
+    ),
+  ];
+  return parts.length ? parts.join("; ") : "Invalid profile data";
+}
+
+const linkedInUrlSchema = z.preprocess(
+  (val) => (typeof val === "string" ? val.trim() : val),
+  z.union([
+    z.literal(""),
+    z
+      .string()
+      .url("Enter a valid LinkedIn URL (https://...)")
+      .refine(
+        (u) => /^https?:\/\//i.test(u),
+        "LinkedIn URL must start with http:// or https://"
+      ),
+  ])
+);
+
 const skillSchema = z.object({
   skill: z.string().min(1),
   masteryLevel: z.number().int().min(1).max(5),
@@ -15,7 +40,7 @@ const schema = z.object({
   expertise: z.string().optional(),
   yearsExp: z.number().optional(),
   maxMentees: z.number().optional(),
-  linkedInUrl: z.string().url().optional().or(z.literal("")),
+  linkedInUrl: linkedInUrlSchema.optional(),
   city: z.string().optional(),
   industry: z.string().optional(),
   seniorityLevel: z.enum(["MID", "SENIOR", "EXECUTIVE", "FOUNDER"]).optional().nullable(),
@@ -69,7 +94,10 @@ export async function PATCH(request: Request) {
   const body = await request.json();
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json(
+      { error: formatZodError(parsed.error) },
+      { status: 400 }
+    );
   }
 
   const data = parsed.data;

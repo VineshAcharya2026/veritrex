@@ -6,6 +6,7 @@ import { isBlacklisted } from "@/lib/blacklist";
 import { logAudit } from "@/lib/audit";
 import { getClientIp } from "@/lib/utils";
 import { parseSkillInput } from "@/lib/skills";
+import { sendRegistrationConfirmation } from "@/lib/email";
 
 export async function POST(request: Request) {
   try {
@@ -85,6 +86,12 @@ export async function POST(request: Request) {
       ipAddress: ip,
       metadata: { role: data.role },
     });
+
+    try {
+      await sendRegistrationConfirmation(email, data.firstName);
+    } catch {
+      // non-blocking when SMTP is not configured
+    }
 
     return NextResponse.json({ id: user.id, status: user.status }, { status: 201 });
   } catch (err) {

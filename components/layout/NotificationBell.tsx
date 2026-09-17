@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth/client";
 import Link from "next/link";
 import { Bell, CheckCheck, GraduationCap, UserCheck } from "lucide-react";
 import { cn, formatDate } from "@/lib/utils";
@@ -38,6 +38,18 @@ function getNotificationHref(type: string, role?: string): string | null {
       if (role === "SUPER_ADMIN") return "/dashboard/admin";
       if (role === "MENTOR") return "/dashboard/mentor";
       if (role === "MENTEE") return "/dashboard/mentee";
+      return null;
+    case "SESSION_NO_SHOW":
+    case "RATING":
+    case "RATING_REMINDER":
+      if (role === "MENTOR") return "/dashboard/mentor/ratings";
+      if (role === "MENTEE") return "/dashboard/mentee/ratings";
+      if (role === "SUPER_ADMIN") return "/dashboard/admin/ratings";
+      return null;
+    case "STRIKE_WARNING":
+      if (role === "SUPER_ADMIN") return "/dashboard/admin/strikes";
+      if (role === "MENTOR") return "/dashboard/mentor/ratings";
+      if (role === "MENTEE") return "/dashboard/mentee/ratings";
       return null;
     default:
       return null;

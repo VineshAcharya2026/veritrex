@@ -26,8 +26,8 @@ export function DashboardShell({
       <Sidebar items={navItems} title={title} />
       {mobileOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="absolute inset-0 bg-accent/30 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <aside className="absolute left-0 top-0 h-full w-64 bg-white shadow-card-hover animate-fade-in">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
+          <aside className="absolute left-0 top-0 h-full w-64 border-r border-white/10 bg-black shadow-card-hover animate-fade-in">
             <nav className="space-y-1 p-4 pt-20">
               {navItems.map((item) => {
                 const Icon = item.icon;
@@ -39,7 +39,9 @@ export function DashboardShell({
                     onClick={() => setMobileOpen(false)}
                     className={cn(
                       "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-all",
-                      active ? "bg-accent text-white" : "text-muted hover:bg-accent/5 hover:text-accent"
+                      active
+                        ? "bg-landing-teal text-black"
+                        : "text-white/70 hover:bg-white/5 hover:text-landing-teal"
                     )}
                   >
                     <Icon className="h-4 w-4" />

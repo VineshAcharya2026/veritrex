@@ -1,5 +1,6 @@
 import { LandingHeader } from "@/components/home/LandingHeader";
 import { LandingHero } from "@/components/home/LandingHero";
+import { AboutSection } from "@/components/home/AboutSection";
 import { QuickStartForm } from "@/components/home/QuickStartForm";
 import { BenefitsSection } from "@/components/home/BenefitsSection";
 import { RolePlanSection } from "@/components/home/RolePlanSection";
@@ -13,6 +14,7 @@ export default function HomePage() {
       <LandingHeader />
       <main>
         <LandingHero />
+        <AboutSection />
         <QuickStartForm />
         <BenefitsSection />
         <RolePlanSection />

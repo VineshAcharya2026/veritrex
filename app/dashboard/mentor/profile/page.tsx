@@ -10,6 +10,8 @@ import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Linkedin, Trash2, Upload, ChevronLeft, ChevronRight } from "lucide-react";
+import { CoverImageUploader } from "@/components/profile/CoverImageUploader";
+import { AvatarImageUploader } from "@/components/profile/AvatarImageUploader";
 
 type Skill = { skill: string; masteryLevel: number };
 type ContentItem = {
@@ -61,6 +63,24 @@ const INTEREST_OPTIONS = [
 ];
 
 const CONTENT_TYPES = ["POST", "PODCAST", "VIDEO", "IMAGE"] as const;
+
+function formatApiError(error: unknown, fallback: string) {
+  if (typeof error === "string") return error;
+  if (error && typeof error === "object" && "formErrors" in error) {
+    const f = error as {
+      formErrors?: string[];
+      fieldErrors?: Record<string, string[]>;
+    };
+    const parts = [
+      ...(f.formErrors ?? []),
+      ...Object.entries(f.fieldErrors ?? {}).flatMap(([k, v]) =>
+        (v ?? []).map((m) => `${k}: ${m}`)
+      ),
+    ];
+    if (parts.length) return parts.join("; ");
+  }
+  return fallback;
+}
 
 type FormState = {
   company: string;
@@ -161,6 +181,7 @@ export default function MentorProfilePage() {
   });
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
   function loadProfile() {
@@ -214,34 +235,52 @@ export default function MentorProfilePage() {
 
   useEffect(() => { loadProfile(); loadContent(); }, []);
 
-  async function saveProfile(e?: React.FormEvent) {
+  async function saveProfile(
+    e?: React.FormEvent,
+    options?: { advance?: boolean }
+  ) {
     e?.preventDefault();
-    setError(""); setSaved(false);
-    const res = await fetch("/api/mentor/profile", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...form,
-        yearsExp: form.yearsExp ? Number(form.yearsExp) : undefined,
-        maxMentees: Number(form.maxMentees),
-        seniorityLevel: form.seniorityLevel || null,
-        skills,
-        threeWords: form.threeWords.filter(Boolean),
-        industriesWorked: form.industriesWorked
-          ? form.industriesWorked.split(",").map((s) => s.trim()).filter(Boolean)
-          : undefined,
-        languages: form.languages
-          ? form.languages.split(",").map((s) => s.trim()).filter(Boolean)
-          : undefined,
-      }),
-    });
-    if (!res.ok) {
-      const data = await res.json();
-      setError(data.error || "Failed to save");
-      return;
+    setError("");
+    setSaved(false);
+    setSaving(true);
+    try {
+      const res = await fetch("/api/mentor/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...form,
+          yearsExp: form.yearsExp ? Number(form.yearsExp) : undefined,
+          maxMentees: Number(form.maxMentees) || 5,
+          seniorityLevel: form.seniorityLevel || null,
+          linkedInUrl: form.linkedInUrl.trim(),
+          skills,
+          threeWords: form.threeWords.filter(Boolean),
+          industriesWorked: form.industriesWorked
+            ? form.industriesWorked.split(",").map((s) => s.trim()).filter(Boolean)
+            : undefined,
+          languages: form.languages
+            ? form.languages.split(",").map((s) => s.trim()).filter(Boolean)
+            : undefined,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(formatApiError(data.error, "Failed to save"));
+        return;
+      }
+      setSaved(true);
+      loadProfile();
+      if (options?.advance) {
+        setSection((s) => Math.min(s + 1, SECTIONS.length - 1));
+        if (typeof window !== "undefined") {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      }
+    } catch {
+      setError("Network error — could not save profile");
+    } finally {
+      setSaving(false);
     }
-    setSaved(true);
-    loadProfile();
   }
 
   function addSkill() {
@@ -325,8 +364,10 @@ export default function MentorProfilePage() {
 
       {/* Section 1: Professional Identity */}
       {section === 0 && (
-        <form onSubmit={saveProfile} className="space-y-4 rounded-xl border border-primary/8 bg-white p-6 shadow-card">
+        <form onSubmit={(e) => saveProfile(e, { advance: true })} className="space-y-4 rounded-xl border border-primary/8 bg-white p-6 shadow-card">
           <h3 className="font-semibold text-primary">Professional Identity</h3>
+          <AvatarImageUploader displayName={form.professionalHeadline || form.company || undefined} />
+          <CoverImageUploader />
           <div className="space-y-2">
             <Label>Professional Headline (max 120 chars)</Label>
             <Input value={form.professionalHeadline} maxLength={120}
@@ -370,14 +411,16 @@ export default function MentorProfilePage() {
           </div>
           <div className="flex justify-between">
             <div />
-            <Button type="submit" variant="accent">Save &amp; continue</Button>
+            <Button type="submit" variant="accent" disabled={saving}>
+              {saving ? "Saving…" : "Save & continue"}
+            </Button>
           </div>
         </form>
       )}
 
       {/* Section 2: My Expertise */}
       {section === 1 && (
-        <form onSubmit={saveProfile} className="space-y-4 rounded-xl border border-primary/8 bg-white p-6 shadow-card">
+        <form onSubmit={(e) => saveProfile(e, { advance: true })} className="space-y-4 rounded-xl border border-primary/8 bg-white p-6 shadow-card">
           <h3 className="font-semibold text-primary">My Expertise</h3>
           <div className="space-y-2">
             <Label>Areas of expertise (max 5)</Label>
@@ -426,14 +469,16 @@ export default function MentorProfilePage() {
             <Button type="button" variant="outline" onClick={() => setSection(0)}>
               <ChevronLeft className="mr-1 h-4 w-4" />Back
             </Button>
-            <Button type="submit" variant="accent">Save &amp; continue</Button>
+            <Button type="submit" variant="accent" disabled={saving}>
+              {saving ? "Saving…" : "Save & continue"}
+            </Button>
           </div>
         </form>
       )}
 
       {/* Section 3: My Mentoring Philosophy */}
       {section === 2 && (
-        <form onSubmit={saveProfile} className="space-y-4 rounded-xl border border-primary/8 bg-white p-6 shadow-card">
+        <form onSubmit={(e) => saveProfile(e, { advance: true })} className="space-y-4 rounded-xl border border-primary/8 bg-white p-6 shadow-card">
           <h3 className="font-semibold text-primary">My Mentoring Philosophy</h3>
           <div className="space-y-2">
             <Label>Why do you mentor?</Label>
@@ -455,14 +500,16 @@ export default function MentorProfilePage() {
             <Button type="button" variant="outline" onClick={() => setSection(1)}>
               <ChevronLeft className="mr-1 h-4 w-4" />Back
             </Button>
-            <Button type="submit" variant="accent">Save &amp; continue</Button>
+            <Button type="submit" variant="accent" disabled={saving}>
+              {saving ? "Saving…" : "Save & continue"}
+            </Button>
           </div>
         </form>
       )}
 
       {/* Section 4: My Mentoring Style */}
       {section === 3 && (
-        <form onSubmit={saveProfile} className="space-y-4 rounded-xl border border-primary/8 bg-white p-6 shadow-card">
+        <form onSubmit={(e) => saveProfile(e, { advance: true })} className="space-y-4 rounded-xl border border-primary/8 bg-white p-6 shadow-card">
           <h3 className="font-semibold text-primary">My Mentoring Style</h3>
           <div className="space-y-2">
             <Label>How would you describe your mentoring style? (choose up to 2)</Label>
@@ -483,14 +530,16 @@ export default function MentorProfilePage() {
             <Button type="button" variant="outline" onClick={() => setSection(2)}>
               <ChevronLeft className="mr-1 h-4 w-4" />Back
             </Button>
-            <Button type="submit" variant="accent">Save &amp; continue</Button>
+            <Button type="submit" variant="accent" disabled={saving}>
+              {saving ? "Saving…" : "Save & continue"}
+            </Button>
           </div>
         </form>
       )}
 
       {/* Section 5: Professional Achievements */}
       {section === 4 && (
-        <form onSubmit={saveProfile} className="space-y-4 rounded-xl border border-primary/8 bg-white p-6 shadow-card">
+        <form onSubmit={(e) => saveProfile(e, { advance: true })} className="space-y-4 rounded-xl border border-primary/8 bg-white p-6 shadow-card">
           <h3 className="font-semibold text-primary">Professional Achievements</h3>
           <div className="space-y-2">
             <Label>Three professional achievements you are proud of</Label>
@@ -506,14 +555,16 @@ export default function MentorProfilePage() {
             <Button type="button" variant="outline" onClick={() => setSection(3)}>
               <ChevronLeft className="mr-1 h-4 w-4" />Back
             </Button>
-            <Button type="submit" variant="accent">Save &amp; continue</Button>
+            <Button type="submit" variant="accent" disabled={saving}>
+              {saving ? "Saving…" : "Save & continue"}
+            </Button>
           </div>
         </form>
       )}
 
       {/* Section 6: Personal Side */}
       {section === 5 && (
-        <form onSubmit={saveProfile} className="space-y-4 rounded-xl border border-primary/8 bg-white p-6 shadow-card">
+        <form onSubmit={(e) => saveProfile(e, { advance: true })} className="space-y-4 rounded-xl border border-primary/8 bg-white p-6 shadow-card">
           <h3 className="font-semibold text-primary">Personal Side</h3>
           <div className="space-y-2">
             <Label>Outside work, what are your interests?</Label>
@@ -529,14 +580,16 @@ export default function MentorProfilePage() {
             <Button type="button" variant="outline" onClick={() => setSection(4)}>
               <ChevronLeft className="mr-1 h-4 w-4" />Back
             </Button>
-            <Button type="submit" variant="accent">Save &amp; continue</Button>
+            <Button type="submit" variant="accent" disabled={saving}>
+              {saving ? "Saving…" : "Save & continue"}
+            </Button>
           </div>
         </form>
       )}
 
       {/* Section 7: Availability */}
       {section === 6 && (
-        <form onSubmit={saveProfile} className="space-y-4 rounded-xl border border-primary/8 bg-white p-6 shadow-card">
+        <form onSubmit={(e) => saveProfile(e, { advance: true })} className="space-y-4 rounded-xl border border-primary/8 bg-white p-6 shadow-card">
           <h3 className="font-semibold text-primary">Availability</h3>
           <div className="space-y-2">
             <Label>Preferred mentoring format</Label>
@@ -576,14 +629,16 @@ export default function MentorProfilePage() {
             <Button type="button" variant="outline" onClick={() => setSection(5)}>
               <ChevronLeft className="mr-1 h-4 w-4" />Back
             </Button>
-            <Button type="submit" variant="accent">Save &amp; continue</Button>
+            <Button type="submit" variant="accent" disabled={saving}>
+              {saving ? "Saving…" : "Save & continue"}
+            </Button>
           </div>
         </form>
       )}
 
       {/* Section 8: Public Closing */}
       {section === 7 && (
-        <form onSubmit={saveProfile} className="space-y-4 rounded-xl border border-primary/8 bg-white p-6 shadow-card">
+        <form onSubmit={(e) => saveProfile(e, { advance: false })} className="space-y-4 rounded-xl border border-primary/8 bg-white p-6 shadow-card">
           <h3 className="font-semibold text-primary">Public Closing</h3>
           <div className="space-y-2">
             <Label>Complete this sentence: &quot;If I could help every mentee achieve just one thing, it would be...&quot;</Label>
@@ -600,7 +655,9 @@ export default function MentorProfilePage() {
             <Button type="button" variant="outline" onClick={() => setSection(6)}>
               <ChevronLeft className="mr-1 h-4 w-4" />Back
             </Button>
-            <Button type="submit" variant="accent">Save profile</Button>
+            <Button type="submit" variant="accent" disabled={saving}>
+              {saving ? "Saving…" : "Save profile"}
+            </Button>
           </div>
         </form>
       )}

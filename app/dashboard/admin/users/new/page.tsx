@@ -3,49 +3,72 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RegisterFormFields } from "@/components/auth/RegisterFormFields";
+import { formatApiError } from "@/lib/api-errors";
+import {
+  mapZodFieldErrors,
+  registerSchema,
+  type RegisterFormValues,
+} from "@/lib/validators/auth";
+import { formatPhoneForApi } from "@/lib/validators/phone";
+import { REGISTER_DEFAULT_VALUES } from "@/lib/validators/register-form";
 
-type CreateRole = "MENTOR" | "MENTEE";
+type CreateRole = RegisterFormValues["role"];
 
 export default function AdminCreateUserPage() {
   const router = useRouter();
-  const [role, setRole] = useState<CreateRole>("MENTEE");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    password: "",
-    companyName: "",
-    title: "",
-    expertise: "",
-    currentRole: "",
-    goals: "",
-    desiredSkills: "",
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    setError: setFieldError,
+    watch,
+    formState: { errors },
+  } = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+    mode: "onTouched",
+    defaultValues: REGISTER_DEFAULT_VALUES,
   });
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
+  const role = watch("role");
+
+  async function onSubmit(values: RegisterFormValues) {
     setError("");
+    setLoading(true);
 
     const res = await fetch("/api/admin/users", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, role }),
+      body: JSON.stringify({
+        ...values,
+        phone: formatPhoneForApi(values.phone),
+      }),
     });
 
     const data = await res.json();
     setLoading(false);
 
     if (!res.ok) {
-      setError(typeof data.error === "string" ? data.error : "Failed to create user");
+      const fieldErrorsFromApi = data.error?.fieldErrors as
+        | Record<string, string[] | undefined>
+        | undefined;
+      if (fieldErrorsFromApi) {
+        const mapped = mapZodFieldErrors({ fieldErrors: fieldErrorsFromApi });
+        for (const [key, message] of Object.entries(mapped)) {
+          setFieldError(key as keyof RegisterFormValues, { message });
+        }
+        if (Object.keys(mapped).length) return;
+      }
+      setError(formatApiError(data.error, "Failed to create user"));
       return;
     }
 
@@ -66,66 +89,22 @@ export default function AdminCreateUserPage() {
 
       {error && <Alert variant="error">{error}</Alert>}
 
-      <form onSubmit={handleSubmit} className="max-w-xl space-y-4 rounded-xl border border-primary/8 bg-white p-6 shadow-card">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="firstName">First name</Label>
-            <Input
-              id="firstName"
-              required
-              value={form.firstName}
-              onChange={(e) => setForm({ ...form, firstName: e.target.value })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="lastName">Last name</Label>
-            <Input
-              id="lastName"
-              required
-              value={form.lastName}
-              onChange={(e) => setForm({ ...form, lastName: e.target.value })}
-            />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            required
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="phone">Phone (optional)</Label>
-          <Input
-            id="phone"
-            value={form.phone}
-            onChange={(e) => setForm({ ...form, phone: e.target.value })}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
-          <Input
-            id="password"
-            type="password"
-            required
-            minLength={8}
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-          />
-        </div>
-
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        noValidate
+        className="max-w-xl space-y-4 rounded-xl border border-primary/8 bg-white p-6 shadow-card"
+      >
         <div className="space-y-2">
           <Label htmlFor="role">Role</Label>
           <select
             id="role"
             value={role}
-            onChange={(e) => setRole(e.target.value as CreateRole)}
+            onChange={(e) =>
+              setValue("role", e.target.value as CreateRole, {
+                shouldValidate: true,
+                shouldTouch: true,
+              })
+            }
             className="h-10 w-full rounded-md border border-primary/10 bg-white px-3 text-sm"
           >
             <option value="MENTOR">Mentor</option>
@@ -133,63 +112,12 @@ export default function AdminCreateUserPage() {
           </select>
         </div>
 
-        {role === "MENTOR" && (
-          <>
-            <div className="space-y-2">
-              <Label htmlFor="companyName">Company</Label>
-              <Input
-                id="companyName"
-                value={form.companyName}
-                onChange={(e) => setForm({ ...form, companyName: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="expertise">Expertise (comma-separated)</Label>
-              <Input
-                id="expertise"
-                value={form.expertise}
-                onChange={(e) => setForm({ ...form, expertise: e.target.value })}
-              />
-            </div>
-          </>
-        )}
-
-        {role === "MENTEE" && (
-          <>
-            <div className="space-y-2">
-              <Label htmlFor="currentRole">Current role</Label>
-              <Input
-                id="currentRole"
-                value={form.currentRole}
-                onChange={(e) => setForm({ ...form, currentRole: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="goals">Goals</Label>
-              <Input
-                id="goals"
-                value={form.goals}
-                onChange={(e) => setForm({ ...form, goals: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="desiredSkills">Desired skills (comma-separated)</Label>
-              <Input
-                id="desiredSkills"
-                value={form.desiredSkills}
-                onChange={(e) => setForm({ ...form, desiredSkills: e.target.value })}
-              />
-            </div>
-          </>
-        )}
+        <RegisterFormFields
+          register={register}
+          errors={errors}
+          role={role}
+          setValue={setValue}
+        />
 
         <Button type="submit" disabled={loading}>
           {loading ? "Creating…" : "Create user"}

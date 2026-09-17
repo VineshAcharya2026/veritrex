@@ -7,8 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/alert";
 
-import { MenteeRatingPanel } from "@/components/mentee/MenteeRatingPanel";
-
 export default function MenteeGoalsPage() {
   const [form, setForm] = useState({ currentRole: "", goals: "", desiredSkills: "" });
   const [saved, setSaved] = useState(false);
@@ -40,7 +38,6 @@ export default function MenteeGoalsPage() {
   return (
     <div className="mx-auto max-w-xl space-y-6">
       <PageHeader title="Goals & skills" description="Tell mentors what you want to achieve." />
-      <MenteeRatingPanel />
       {saved && <Alert variant="success">Goals saved.</Alert>}
       <form onSubmit={save} className="space-y-4 rounded-xl border border-primary/8 bg-white p-6 shadow-card">
         <div className="space-y-2">

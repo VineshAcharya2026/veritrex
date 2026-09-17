@@ -23,7 +23,6 @@ export async function GET(
       tier: "EMERGING",
       tierLabel: "Emerging",
       badgeColor: "grey",
-      totalScore: 0,
     });
   }
 
@@ -33,6 +32,5 @@ export async function GET(
     tier: record.tier,
     tierLabel: info.label,
     badgeColor: info.color,
-    totalScore: record.totalScore,
   });
 }

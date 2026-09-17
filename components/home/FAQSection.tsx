@@ -12,11 +12,11 @@ export function FAQSection() {
     <section id="faq" className="landing-section-alt py-16 md:py-20">
       <div className="mx-auto max-w-3xl px-4">
         <h2 className="text-center text-2xl font-bold text-landing-navy md:text-3xl">
-          Refer and earn —{" "}
-          <span className="text-landing-blue">Frequently Asked Questions</span>
+          Everything you need to know —{" "}
+          <span className="text-landing-teal">Frequently Asked Questions</span>
         </h2>
 
-        <div className="mt-10 divide-y divide-landing-blue/15 rounded-xl border border-landing-blue/15 bg-white shadow-card">
+        <div className="mt-10 divide-y divide-landing-teal/15 rounded-xl border border-landing-teal/15 bg-white shadow-card">
           {FAQ_ITEMS.map((item, index) => {
             const isOpen = openIndex === index;
             return (
@@ -24,13 +24,13 @@ export function FAQSection() {
                 <button
                   type="button"
                   onClick={() => setOpenIndex(isOpen ? null : index)}
-                  className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-landing-blueLight/50"
+                  className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-landing-tealLight/50"
                   aria-expanded={isOpen}
                 >
                   <span className="text-sm font-semibold text-landing-navy">{item.question}</span>
                   <ChevronDown
                     className={cn(
-                      "h-5 w-5 shrink-0 text-landing-blue transition-transform duration-200",
+                      "h-5 w-5 shrink-0 text-landing-teal transition-transform duration-200",
                       isOpen && "rotate-180"
                     )}
                   />

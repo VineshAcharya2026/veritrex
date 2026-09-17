@@ -1,12 +1,13 @@
 "use client";
 
-import { DashboardShell } from "@/components/layout/DashboardShell";
+import { SocialDashboardShell } from "@/components/layout/SocialDashboardShell";
+import { SocialPageFrame } from "@/components/layout/SocialPageFrame";
 import { mentorNav } from "@/lib/nav";
 
 export default function MentorLayout({ children }: { children: React.ReactNode }) {
   return (
-    <DashboardShell navItems={mentorNav} title="Mentor">
-      {children}
-    </DashboardShell>
+    <SocialDashboardShell navItems={mentorNav}>
+      <SocialPageFrame role="MENTOR">{children}</SocialPageFrame>
+    </SocialDashboardShell>
   );
 }
