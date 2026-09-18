@@ -7,6 +7,9 @@ dist/
 coverage/
 .DS_Store
 *.log
+deploy-log.txt
+deploy[0-9].txt
+tsconfig.tsbuildinfo
 .env*
 !.env.example
 
