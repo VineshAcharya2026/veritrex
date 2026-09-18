@@ -19,8 +19,8 @@
     "cf:upload": "node node_modules/@opennextjs/cloudflare/dist/cli/index.js build && node node_modules/@opennextjs/cloudflare/dist/cli/index.js upload",
     "cf:typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "db:d1:create": "wrangler d1 create trusthire-db",
-    "db:d1:migrate": "wrangler d1 migrations apply trusthire-db --local",
-    "db:d1:migrate:remote": "wrangler d1 migrations apply trusthire-db --remote",
+    "db:d1:migrate": "node node_modules/wrangler/bin/wrangler.js d1 migrations apply trusthire-db --local",
+    "db:d1:migrate:remote": "node node_modules/wrangler/bin/wrangler.js d1 migrations apply trusthire-db --remote",
     "db:d1:seed": "node scripts/seed-d1.mjs --local",
     "db:d1:seed:remote": "node scripts/seed-d1.mjs --remote"
   },

@@ -1,6 +1,7 @@
 "$schema" = "./node_modules/wrangler/config-schema.json"
 name = "tursthire"
 main = "custom-worker.ts"
+account_id = "c8a4f99bb63dae571ca58bfec17b0ad3"
 compatibility_date = "2025-04-01"
 compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
 
@@ -19,12 +20,12 @@ service = "tursthire"
 [[d1_databases]]
 binding = "DB"
 database_name = "trusthire-db"
-database_id = "6ec30083-9d59-4c19-a034-2a81cf961fe3"
+database_id = "4fdf52a5-c18a-4fbe-bb7a-e6727889054f"
 migrations_dir = "db/migrations"
 
 [[kv_namespaces]]
 binding = "AUTH_KV"
-id = "9ef1d560efe34b7cacbca0167ad88d24"
+id = "dc145a793f5d4919a0a796d834fba389"
 
 # Mentor profile media — enable R2 in Cloudflare Dashboard first, then uncomment:
 # [[r2_buckets]]
