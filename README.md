@@ -108,6 +108,27 @@ Optional: `CRON_SECRET`, `R2_PUBLIC_URL` (when R2 is enabled).
 npm run cf:deploy
 ```
 
+### Cloudflare Git (Workers)
+
+Connect the GitHub repo in the [Workers dashboard](https://dash.cloudflare.com/) and use these settings (do **not** use plain `npm run build` — that skips the OpenNext Worker bundle):
+
+| Setting | Value |
+|---------|--------|
+| **Build command** | `npm run cf:build` |
+| **Node.js version** | 22.x (recommended; avoid 24 until verified) |
+| **Deploy** | Workers Git deploy / Wrangler (bindings from `wrangler.toml`) |
+
+**Secrets** (Workers → Settings → Variables): `AUTH_SECRET`, `NEXTAUTH_URL` (your `*.workers.dev` or custom domain URL). Optional: `CRON_SECRET`, `R2_PUBLIC_URL`.
+
+**Database:** Run migrations and demo seed against D1 remotely — not `prisma/seed.ts` (legacy/local Postgres only):
+
+```bash
+npm run db:d1:migrate:remote
+npm run db:d1:seed:remote
+```
+
+Ensure `wrangler.toml` lists correct `database_id` and KV `id` before the first Git deploy.
+
 ### 5. Smoke test
 
 - `POST /api/auth/login` with demo credentials

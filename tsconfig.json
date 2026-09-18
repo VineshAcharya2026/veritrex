@@ -40,6 +40,8 @@
     "node_modules",
     "src",
     "custom-worker.ts",
-    ".open-next"
+    ".open-next",
+    "prisma",
+    "scripts"
   ]
 }
