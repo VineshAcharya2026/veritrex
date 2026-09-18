@@ -7,7 +7,8 @@
   },
   "scripts": {
     "dev": "node node_modules/next/dist/bin/next dev",
-    "build": "node node_modules/next/dist/bin/next build",
+    "build": "node scripts/workers-build.mjs",
+    "next:build": "node node_modules/next/dist/bin/next build",
     "start": "node node_modules/next/dist/bin/next start",
     "lint": "node node_modules/next/dist/bin/next lint",
     "preview": "node node_modules/@opennextjs/cloudflare/dist/cli/index.js build && node node_modules/@opennextjs/cloudflare/dist/cli/index.js preview",

@@ -110,13 +110,19 @@ npm run cf:deploy
 
 ### Cloudflare Git (Workers)
 
-Connect the GitHub repo in the [Workers dashboard](https://dash.cloudflare.com/) and use these settings (do **not** use plain `npm run build` — that skips the OpenNext Worker bundle):
+Connect the GitHub repo in the [Workers dashboard](https://dash.cloudflare.com/) and use these settings:
 
 | Setting | Value |
 |---------|--------|
-| **Build command** | `npm run cf:build` |
-| **Node.js version** | 22.x (recommended; avoid 24 until verified) |
-| **Deploy** | Workers Git deploy / Wrangler (bindings from `wrangler.toml`) |
+| **Build command** | `npm run build` (Next.js, then OpenNext bundle on CI via `postbuild`) |
+| **Deploy command** | `npx wrangler deploy` |
+| **Node.js version** | 22.x (see `.node-version`) |
+
+On Cloudflare’s build environment (`CI=true`), `npm run build` runs standalone Next and then OpenNext with `--skipNextBuild` via [`scripts/workers-build.mjs`](scripts/workers-build.mjs), producing `.open-next` for Wrangler. Locally, `npm run build` is plain Next only; use `npm run cf:build` or `npm run cf:deploy` for the Worker bundle.
+
+Plain Next only (no Worker bundle): `npm run next:build` — do **not** use that for Git deploy, or `wrangler deploy` fails with “Could not find compiled Open Next config”.
+
+For a single local command (build + deploy), use `npm run cf:deploy` or [`scripts/deploy-cf.mjs`](scripts/deploy-cf.mjs) (required on Windows if the project path contains `&`).
 
 **Secrets** (Workers → Settings → Variables): `AUTH_SECRET`, `NEXTAUTH_URL` (your `*.workers.dev` or custom domain URL). Optional: `CRON_SECRET`, `R2_PUBLIC_URL`.
 
