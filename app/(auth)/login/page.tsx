@@ -11,6 +11,7 @@ import { Shield, Users } from "lucide-react";
 import { BRAND } from "@/lib/brand";
 import { LogoLockup, LogoWordmark } from "@/components/ui/Logo";
 import { dashboardPathForRole } from "@/lib/auth/dashboard";
+import { useSession } from "@/lib/auth/client";
 import type { Role } from "@/lib/db/types";
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -24,6 +25,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 
 export default function LoginPage() {
   const router = useRouter();
+  const { refresh } = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -53,13 +55,17 @@ export default function LoginPage() {
     const role = body.user?.role;
     const status = body.user?.status;
 
+    await refresh();
+
     if (status === "PENDING") {
+      router.refresh();
       router.push("/pending-approval");
       return;
     }
 
     await fetch("/api/auth/login-log", { method: "POST", credentials: "include" });
 
+    router.refresh();
     router.push(role ? dashboardPathForRole(role as Role) : "/");
   }
 

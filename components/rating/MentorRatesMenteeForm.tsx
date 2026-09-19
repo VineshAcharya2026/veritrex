@@ -43,6 +43,7 @@ export function MentorRatesMenteeForm({
       const res = await fetch(`/api/sessions/${sessionId}/rate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(scores),
       });
       const data = await res.json().catch(() => ({}));

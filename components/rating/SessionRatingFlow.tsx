@@ -30,7 +30,7 @@ export function SessionRatingFlow({ session }: { session: SessionInfo }) {
 
   const loadRatingStatus = useCallback(() => {
     setStatusError("");
-    fetch(`/api/sessions/${session.id}/ratings`)
+    fetch(`/api/sessions/${session.id}/ratings`, { credentials: "include" })
       .then(async (r) => {
         const data = await r.json().catch(() => ({}));
         if (!r.ok) {

@@ -32,6 +32,7 @@ export function EndorseButton({
     setError("");
     const res = await fetch(`/api/users/${userId}/endorse`, {
       method: endorsed ? "DELETE" : "POST",
+      credentials: "include",
     });
     setLoading(false);
     if (!res.ok) {

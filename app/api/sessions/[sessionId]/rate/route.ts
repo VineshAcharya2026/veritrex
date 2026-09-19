@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
+import { formatApiError } from "@/lib/api-errors";
 import { prisma } from "@/lib/prisma";
 import {
   computeMenteeRatesMentorScore,
@@ -11,11 +12,6 @@ import {
   menteeRatesMentorSchema,
   mentorRatesMenteeSchema,
 } from "@/lib/rating-questionnaire";
-
-function apiError(error: unknown, fallback: string) {
-  if (typeof error === "string") return error;
-  return fallback;
-}
 
 export async function POST(
   request: Request,
@@ -73,7 +69,7 @@ export async function POST(
     const parsed = menteeRatesMentorSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: apiError(parsed.error.message, "Invalid rating answers") },
+        { error: formatApiError(parsed.error.flatten(), "Invalid rating answers") },
         { status: 400 }
       );
     }
@@ -106,7 +102,7 @@ export async function POST(
   const parsed = mentorRatesMenteeSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: apiError(parsed.error.message, "Invalid rating answers") },
+      { error: formatApiError(parsed.error.flatten(), "Invalid rating answers") },
       { status: 400 }
     );
   }

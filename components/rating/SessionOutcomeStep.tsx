@@ -45,6 +45,7 @@ export function SessionOutcomeStep({
       const res = await fetch(`/api/sessions/${sessionId}/outcome`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(body),
       });
       const text = await res.text();

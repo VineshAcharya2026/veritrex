@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import {
-  clearSessionCookie,
+  clearSessionCookieOnResponse,
   getSessionTokenFromRequest,
   revokeSessionToken,
 } from "@/lib/auth/session";
@@ -10,6 +10,7 @@ export async function POST(request: Request) {
   if (token) {
     await revokeSessionToken(token);
   }
-  await clearSessionCookie();
-  return NextResponse.json({ ok: true });
+  const response = NextResponse.json({ ok: true });
+  clearSessionCookieOnResponse(response);
+  return response;
 }

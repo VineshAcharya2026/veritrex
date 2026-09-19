@@ -2,7 +2,7 @@
 
 export const BRAND = {
   name: "Veritrex",
-  domain: "veritrex.com",
+  domain: "veritrex.org",
   tagline: "Connect. Mentor. Elevate.",
   motto: "Mentorship that builds careers.",
   description:
@@ -15,7 +15,7 @@ export const BRAND = {
   phoneHref: "tel:+919740001208",
   address: "172, Pentagon Passiflora, Sarjapura, Bengaluru 562125",
   city: "Bengaluru",
-  website: "https://veritrex.com",
+  website: "https://veritrex.org",
   freeMentorshipHoursCap: 5,
 } as const;
 

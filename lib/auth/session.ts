@@ -6,7 +6,9 @@ import {
 } from "@/lib/auth/constants";
 import type { AppSession, SessionClaims, SessionUser } from "@/lib/auth/types";
 import { getAuthKv } from "@/lib/db/client";
+import { resolveAppUrl } from "@/lib/platform";
 import { cookies } from "next/headers";
+import type { NextResponse } from "next/server";
 
 function base64UrlEncode(data: Uint8Array | ArrayBuffer | string): string {
   const bytes =
@@ -101,19 +103,47 @@ export async function createSessionToken(user: SessionUser): Promise<string> {
   return signJwt(claims as unknown as Record<string, unknown>);
 }
 
-export function sessionCookieOptions(maxAge = SESSION_MAX_AGE_SECONDS) {
+function isSecureCookie(request?: Request): boolean {
+  if (resolveAppUrl().startsWith("https://")) return true;
+  if (request?.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() === "https") {
+    return true;
+  }
+  return process.env.NODE_ENV === "production";
+}
+
+export function getSessionCookieOptions(
+  maxAge = SESSION_MAX_AGE_SECONDS,
+  request?: Request
+) {
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: isSecureCookie(request),
     sameSite: "lax" as const,
     path: "/",
     maxAge,
   };
 }
 
+/** @deprecated Prefer applySessionCookie on NextResponse in route handlers. */
+export function sessionCookieOptions(maxAge = SESSION_MAX_AGE_SECONDS) {
+  return getSessionCookieOptions(maxAge);
+}
+
+export function applySessionCookie(
+  response: NextResponse,
+  token: string,
+  request?: Request
+): void {
+  response.cookies.set(SESSION_COOKIE, token, getSessionCookieOptions(SESSION_MAX_AGE_SECONDS, request));
+}
+
+export function clearSessionCookieOnResponse(response: NextResponse): void {
+  response.cookies.delete({ name: SESSION_COOKIE, path: "/" });
+}
+
 export async function setSessionCookie(token: string): Promise<void> {
   const store = await cookies();
-  store.set(SESSION_COOKIE, token, sessionCookieOptions());
+  store.set(SESSION_COOKIE, token, getSessionCookieOptions());
 }
 
 export async function clearSessionCookie(): Promise<void> {

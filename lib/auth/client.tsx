@@ -81,6 +81,7 @@ export function useSession() {
     data: ctx.data,
     status: ctx.status,
     update: ctx.refresh,
+    refresh: ctx.refresh,
   };
 }
 

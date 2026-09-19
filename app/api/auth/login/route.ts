@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { AuthError } from "@/lib/auth/types";
-import { createSessionToken, setSessionCookie } from "@/lib/auth/session";
+import {
+  applySessionCookie,
+  createSessionToken,
+} from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 
 const STATUS_ERRORS: Record<string, string> = {
-  PENDING_APPROVAL: "PENDING_APPROVAL",
   ACCOUNT_SUSPENDED: "ACCOUNT_SUSPENDED",
   ACCOUNT_FROZEN: "ACCOUNT_FROZEN",
   ACCOUNT_DELETED: "ACCOUNT_DELETED",
@@ -35,9 +37,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
 
-    if (user.status === "PENDING") {
-      return NextResponse.json({ error: STATUS_ERRORS.PENDING_APPROVAL }, { status: 403 });
-    }
     if (user.status === "SUSPENDED") {
       return NextResponse.json({ error: STATUS_ERRORS.ACCOUNT_SUSPENDED }, { status: 403 });
     }
@@ -60,9 +59,7 @@ export async function POST(request: Request) {
       name,
     });
 
-    await setSessionCookie(token);
-
-    return NextResponse.json({
+    const response = NextResponse.json({
       user: {
         id: user.id,
         email: user.email,
@@ -71,6 +68,8 @@ export async function POST(request: Request) {
         name,
       },
     });
+    applySessionCookie(response, token, request);
+    return response;
   } catch (error) {
     if (error instanceof AuthError) {
       return NextResponse.json({ error: error.code }, { status: 403 });
