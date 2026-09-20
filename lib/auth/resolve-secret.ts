@@ -1,23 +1,9 @@
 import { AUTH_SECRET_ENV, LEGACY_AUTH_SECRET_ENV } from "@/lib/auth/constants";
-import { isCloudflareWorker } from "@/lib/platform";
+import { readWorkerEnvString, readWorkerEnvStringOptional } from "@/lib/worker-env";
 
-function readWorkerEnvString(key: string): string | undefined {
-  if (!isCloudflareWorker()) return undefined;
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { getCloudflareContext } = require("@opennextjs/cloudflare");
-    const env = getCloudflareContext().env as Record<string, string | undefined>;
-    const value = env[key]?.trim();
-    return value || undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-/** JWT signing secret — Workers bindings first, then Node process.env. */
+/** JWT signing secret — Workers bindings first, then process.env. */
 export function resolveAuthSecret(): string {
-  const fromBinding =
-    readWorkerEnvString("AUTH_SECRET") ?? readWorkerEnvString("NEXTAUTH_SECRET");
+  const fromBinding = readWorkerEnvStringOptional(["AUTH_SECRET", "NEXTAUTH_SECRET"]);
   if (fromBinding) return fromBinding;
 
   const secret =
@@ -27,4 +13,9 @@ export function resolveAuthSecret(): string {
     throw new Error("AUTH_SECRET (or NEXTAUTH_SECRET) is not configured");
   }
   return secret;
+}
+
+/** Cron bearer token — same resolution as auth secrets. */
+export function resolveCronSecret(): string | undefined {
+  return readWorkerEnvString("CRON_SECRET");
 }

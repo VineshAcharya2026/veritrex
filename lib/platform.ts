@@ -1,15 +1,4 @@
-function readWorkerEnvString(key: string): string | undefined {
-  if (!isCloudflareWorker()) return undefined;
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { getCloudflareContext } = require("@opennextjs/cloudflare");
-    const env = getCloudflareContext().env as Record<string, string | undefined>;
-    const value = env[key]?.trim();
-    return value || undefined;
-  } catch {
-    return undefined;
-  }
-}
+import { readWorkerEnvString } from "@/lib/worker-env";
 
 /** Resolve the public app URL for auth callbacks and absolute links. */
 export function resolveAppUrl(): string {

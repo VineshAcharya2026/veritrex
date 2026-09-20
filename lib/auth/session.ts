@@ -2,7 +2,7 @@ import { SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from "@/lib/auth/constants";
 import type { AppSession, SessionClaims, SessionUser } from "@/lib/auth/types";
 import { resolveAuthSecret } from "@/lib/auth/resolve-secret";
 import { getAuthKv } from "@/lib/db/client";
-import { isCloudflareWorker, resolveAppUrl } from "@/lib/platform";
+import { resolveAppUrl } from "@/lib/platform";
 import { cookies } from "next/headers";
 import type { NextResponse } from "next/server";
 
@@ -137,22 +137,16 @@ export function applySessionCookie(
   request?: Request
 ): void {
   const opts = getSessionCookieOptions(SESSION_MAX_AGE_SECONDS, request);
-  if (isCloudflareWorker()) {
-    response.headers.append("Set-Cookie", buildSetCookieHeader(SESSION_COOKIE, token, opts));
-    return;
-  }
-  response.cookies.set(SESSION_COOKIE, token, opts);
+  // Route handlers on OpenNext Workers: Set-Cookie via headers is reliable; cookies.set is not.
+  response.headers.append("Set-Cookie", buildSetCookieHeader(SESSION_COOKIE, token, opts));
 }
 
-export function clearSessionCookieOnResponse(response: NextResponse): void {
-  if (isCloudflareWorker()) {
-    response.headers.append(
-      "Set-Cookie",
-      buildSetCookieHeader(SESSION_COOKIE, "", { ...getSessionCookieOptions(0), maxAge: 0 })
-    );
-    return;
-  }
-  response.cookies.delete({ name: SESSION_COOKIE, path: "/" });
+export function clearSessionCookieOnResponse(response: NextResponse, request?: Request): void {
+  const opts = { ...getSessionCookieOptions(0, request), maxAge: 0 };
+  response.headers.append(
+    "Set-Cookie",
+    buildSetCookieHeader(SESSION_COOKIE, "", opts)
+  );
 }
 
 export async function setSessionCookie(token: string): Promise<void> {

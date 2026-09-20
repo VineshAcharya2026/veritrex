@@ -1,8 +1,8 @@
 # Veritrex
 
-Production-ready mentorship platform for **Veritrex** (`veritrex.com`) on **Cloudflare Workers** with **D1**, **KV** session revocation, and custom JWT auth.
+Production mentorship platform for **Veritrex** ([veritrex.org](https://veritrex.org)) on **Cloudflare Workers** with **D1**, **KV** session revocation, and custom JWT auth.
 
-**Contact:** info@veritra.com · +91 97400 01208 · 172, Pentagon Passiflora, Sarjapura, Bengaluru 562125
+**Contact:** info@veritrex.com · +91 97400 01208 · 172, Pentagon Passiflora, Sarjapura, Bengaluru 562125
 
 ## Stack
 
@@ -97,10 +97,9 @@ npm run db:d1:seed:remote
 
 ```bash
 npx wrangler secret put AUTH_SECRET
-npx wrangler secret put NEXTAUTH_URL    # https://your-worker.workers.dev
+npx wrangler secret put NEXTAUTH_URL    # https://veritrex.org (no trailing slash)
+npx wrangler secret put CRON_SECRET     # optional; required for scheduled integrity jobs
 ```
-
-Optional: `CRON_SECRET`, `R2_PUBLIC_URL` (when R2 is enabled).
 
 ### 4. Build and deploy
 
@@ -114,7 +113,7 @@ Connect the GitHub repo in the [Workers dashboard](https://dash.cloudflare.com/)
 
 | Setting | Value |
 |---------|--------|
-| **Build command** | `npm run build` (Next.js, then OpenNext bundle on CI via `postbuild`) |
+| **Build command** | `npm run build` |
 | **Deploy command** | `npx wrangler deploy` |
 | **Node.js version** | 22.x (see `.node-version`) |
 
@@ -137,9 +136,18 @@ Ensure `wrangler.toml` lists correct `database_id` and KV `id` before the first 
 
 ### 5. Smoke test
 
-- `POST /api/auth/login` with demo credentials
+- `GET /api/health` → `{ "status": "ok", "checks": { "d1": "ok", "auth": "ok" } }`
+- `POST /api/auth/login` with demo credentials (JSON body; use a file on Windows shells to avoid escaping issues)
 - `GET /api/auth/me` returns role/status
 - Role dashboards load for admin/mentor/mentee
+
+## Production checklist
+
+1. **Secrets:** `AUTH_SECRET`, `NEXTAUTH_URL=https://veritrex.org`, optional `CRON_SECRET`
+2. **D1:** `npm run db:d1:migrate:remote` and `npm run db:d1:seed:remote` (first deploy only)
+3. **Deploy:** Cloudflare Git on `main`, or `npm run cf:deploy` / `node scripts/deploy-cf.mjs`
+4. **Custom domain:** `veritrex.org` routes in `wrangler.toml` (attach zone in same account as the Worker)
+5. **Monitor:** `GET /api/health` after each deploy; Worker logs for `[auth/login]` errors
 
 ## Project layout
 

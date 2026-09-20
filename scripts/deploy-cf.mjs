@@ -7,11 +7,10 @@
  * ../trusthire-build. node_modules is copied (not junctioned) so Next/OpenNext
  * do not resolve realpaths back to the "&" folder.
  *
- * Always deploys via `opennextjs-cloudflare deploy` (sets OPEN_NEXT_DEPLOY)
- * so wrangler does not recurse back into OpenNext.
+ * Always runs OpenNext build then deploy from a path safe on Windows (no "&" in cwd).
  */
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -54,6 +53,7 @@ if (needsCleanPath) {
       "node_modules",
       ".next",
       ".open-next",
+      ".wrangler",
       ".git",
       "trusthire-build",
       "/NFL",
@@ -91,6 +91,11 @@ const opennextCli = path.join(
   "cli",
   "index.js"
 );
+
+if (needsCleanPath && existsSync(path.join(buildRoot, ".open-next"))) {
+  console.log("\n▶ Clearing stale .open-next in trusthire-build\n");
+  rmSync(path.join(buildRoot, ".open-next"), { recursive: true, force: true });
+}
 
 run(process.execPath, [opennextCli, "build"], buildRoot, "OpenNext build");
 run(process.execPath, [opennextCli, "deploy"], buildRoot, "OpenNext deploy");

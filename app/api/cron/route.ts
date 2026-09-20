@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { resolveCronSecret } from "@/lib/auth/resolve-secret";
 import { headers } from "next/headers";
 import { runIntegrityJobs } from "@/lib/integrity-jobs";
 import {
@@ -9,7 +10,7 @@ import {
 import { backfillNationBuildingEntries } from "@/lib/nation-building-sync";
 
 function cronAuthorized(authHeader: string | null): boolean {
-  const secret = process.env.CRON_SECRET?.trim();
+  const secret = resolveCronSecret();
   if (!secret) return false;
   return authHeader === `Bearer ${secret}`;
 }
