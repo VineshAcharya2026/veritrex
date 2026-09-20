@@ -2,7 +2,7 @@ import { SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from "@/lib/auth/constants";
 import type { AppSession, SessionClaims, SessionUser } from "@/lib/auth/types";
 import { resolveAuthSecret } from "@/lib/auth/resolve-secret";
 import { getAuthKv } from "@/lib/db/client";
-import { resolveAppUrl } from "@/lib/platform";
+import { isCloudflareWorker, resolveAppUrl } from "@/lib/platform";
 import { cookies } from "next/headers";
 import type { NextResponse } from "next/server";
 
@@ -115,15 +115,43 @@ export function sessionCookieOptions(maxAge = SESSION_MAX_AGE_SECONDS) {
   return getSessionCookieOptions(maxAge);
 }
 
+function buildSetCookieHeader(
+  name: string,
+  value: string,
+  opts: ReturnType<typeof getSessionCookieOptions>
+): string {
+  const parts = [
+    `${name}=${value}`,
+    `Path=${opts.path}`,
+    `Max-Age=${opts.maxAge}`,
+    `SameSite=Lax`,
+  ];
+  if (opts.httpOnly) parts.push("HttpOnly");
+  if (opts.secure) parts.push("Secure");
+  return parts.join("; ");
+}
+
 export function applySessionCookie(
   response: NextResponse,
   token: string,
   request?: Request
 ): void {
-  response.cookies.set(SESSION_COOKIE, token, getSessionCookieOptions(SESSION_MAX_AGE_SECONDS, request));
+  const opts = getSessionCookieOptions(SESSION_MAX_AGE_SECONDS, request);
+  if (isCloudflareWorker()) {
+    response.headers.append("Set-Cookie", buildSetCookieHeader(SESSION_COOKIE, token, opts));
+    return;
+  }
+  response.cookies.set(SESSION_COOKIE, token, opts);
 }
 
 export function clearSessionCookieOnResponse(response: NextResponse): void {
+  if (isCloudflareWorker()) {
+    response.headers.append(
+      "Set-Cookie",
+      buildSetCookieHeader(SESSION_COOKIE, "", { ...getSessionCookieOptions(0), maxAge: 0 })
+    );
+    return;
+  }
   response.cookies.delete({ name: SESSION_COOKIE, path: "/" });
 }
 
