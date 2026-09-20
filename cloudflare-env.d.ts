@@ -77,6 +77,10 @@ interface KVNamespace {
 interface CloudflareEnv {
   DB: D1Database;
   AUTH_KV: KVNamespace;
+  AUTH_SECRET?: string;
+  NEXTAUTH_SECRET?: string;
+  NEXTAUTH_URL?: string;
+  CRON_SECRET?: string;
   MENTOR_CONTENT?: R2Bucket;
   HYPERDRIVE?: Hyperdrive;
   ASSETS: Fetcher;

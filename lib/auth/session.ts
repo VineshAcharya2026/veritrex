@@ -1,10 +1,6 @@
-import {
-  AUTH_SECRET_ENV,
-  LEGACY_AUTH_SECRET_ENV,
-  SESSION_COOKIE,
-  SESSION_MAX_AGE_SECONDS,
-} from "@/lib/auth/constants";
+import { SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from "@/lib/auth/constants";
 import type { AppSession, SessionClaims, SessionUser } from "@/lib/auth/types";
+import { resolveAuthSecret } from "@/lib/auth/resolve-secret";
 import { getAuthKv } from "@/lib/db/client";
 import { resolveAppUrl } from "@/lib/platform";
 import { cookies } from "next/headers";
@@ -28,16 +24,6 @@ function base64UrlDecode(input: string): Uint8Array {
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return bytes;
-}
-
-function resolveAuthSecret(): string {
-  const secret =
-    process.env[AUTH_SECRET_ENV]?.trim() ||
-    process.env[LEGACY_AUTH_SECRET_ENV]?.trim();
-  if (!secret) {
-    throw new Error("AUTH_SECRET (or NEXTAUTH_SECRET) is not configured");
-  }
-  return secret;
 }
 
 async function importHmacKey(secret: string): Promise<CryptoKey> {

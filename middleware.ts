@@ -4,9 +4,7 @@ import { SESSION_COOKIE } from "@/lib/auth/constants";
 import type { SessionClaims } from "@/lib/auth/types";
 import type { Role } from "@/lib/db/types";
 import { dashboardPathForRole } from "@/lib/auth/dashboard";
-
-const AUTH_SECRET_ENV = "AUTH_SECRET";
-const LEGACY_AUTH_SECRET_ENV = "NEXTAUTH_SECRET";
+import { resolveAuthSecret } from "@/lib/auth/resolve-secret";
 
 function base64UrlDecode(input: string): Uint8Array {
   const padded = input + "=".repeat((4 - (input.length % 4)) % 4);
@@ -67,9 +65,12 @@ export async function middleware(req: NextRequest) {
     path.startsWith("/mentor/") ||
     path.startsWith("/mentee/");
 
-  const secret =
-    process.env[AUTH_SECRET_ENV]?.trim() ||
-    process.env[LEGACY_AUTH_SECRET_ENV]?.trim();
+  let secret: string | undefined;
+  try {
+    secret = resolveAuthSecret();
+  } catch {
+    secret = undefined;
+  }
 
   const token = req.cookies.get(SESSION_COOKIE)?.value;
   const claims = token && secret ? await verifyToken(token, secret) : null;

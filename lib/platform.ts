@@ -1,5 +1,21 @@
+function readWorkerEnvString(key: string): string | undefined {
+  if (!isCloudflareWorker()) return undefined;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { getCloudflareContext } = require("@opennextjs/cloudflare");
+    const env = getCloudflareContext().env as Record<string, string | undefined>;
+    const value = env[key]?.trim();
+    return value || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Resolve the public app URL for auth callbacks and absolute links. */
 export function resolveAppUrl(): string {
+  const fromBinding = readWorkerEnvString("NEXTAUTH_URL");
+  if (fromBinding) return fromBinding.replace(/\/$/, "");
+
   const configured = process.env.NEXTAUTH_URL?.trim();
   if (configured) return configured.replace(/\/$/, "");
 
