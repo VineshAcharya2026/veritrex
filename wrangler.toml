@@ -5,6 +5,14 @@ account_id = "c8a4f99bb63dae571ca58bfec17b0ad3"
 compatibility_date = "2025-04-01"
 compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
 
+[[routes]]
+pattern = "veritrex.org"
+custom_domain = true
+
+[[routes]]
+pattern = "www.veritrex.org"
+custom_domain = true
+
 [triggers]
 # Daily 03:00 UTC — runs markUnilateral → trust recalc → cheat detection
 crons = ["0 3 * * *"]
