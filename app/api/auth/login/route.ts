@@ -32,7 +32,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
 
-    const valid = await bcrypt.compare(password, user.passwordHash);
+    const hash = user.passwordHash;
+    if (!hash || typeof hash !== "string") {
+      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+    }
+
+    let valid = false;
+    try {
+      valid = await bcrypt.compare(password, hash);
+    } catch {
+      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+    }
     if (!valid) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }

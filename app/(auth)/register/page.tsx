@@ -19,6 +19,9 @@ import {
 } from "@/lib/validators/auth";
 import { formatPhoneForApi } from "@/lib/validators/phone";
 import { REGISTER_DEFAULT_VALUES } from "@/lib/validators/register-form";
+import { dashboardPathForRole } from "@/lib/auth/dashboard";
+import { useSession } from "@/lib/auth/client";
+import type { Role } from "@/lib/db/types";
 
 type RegisterRole = RegisterFormValues["role"];
 
@@ -49,7 +52,9 @@ export default function RegisterPage() {
 function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { refresh } = useSession();
   const [error, setError] = useState("");
+  const [loginHintEmail, setLoginHintEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const {
@@ -80,6 +85,7 @@ function RegisterForm() {
 
   async function onSubmit(values: RegisterFormValues) {
     setError("");
+    setLoginHintEmail(null);
     setLoading(true);
 
     const res = await fetch("/api/auth/register", {
@@ -92,10 +98,13 @@ function RegisterForm() {
       }),
     });
 
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     setLoading(false);
 
     if (!res.ok) {
+      if (res.status === 409) {
+        setLoginHintEmail(values.email.trim().toLowerCase());
+      }
       const fieldErrorsFromApi = data.error?.fieldErrors as
         | Record<string, string[] | undefined>
         | undefined;
@@ -110,7 +119,10 @@ function RegisterForm() {
       return;
     }
 
-    router.push("/login");
+    const role = (data.user?.role ?? values.role) as Role;
+    await refresh();
+    router.refresh();
+    router.push(dashboardPathForRole(role));
   }
 
   return (
@@ -144,6 +156,16 @@ function RegisterForm() {
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
             {error && <Alert variant="error">{error}</Alert>}
+            {loginHintEmail && (
+              <p className="text-center text-sm text-muted">
+                <Link
+                  href={`/login?email=${encodeURIComponent(loginHintEmail)}`}
+                  className="font-medium text-primary hover:underline"
+                >
+                  Sign in with this email
+                </Link>
+              </p>
+            )}
             <RegisterFormFields
               register={register}
               errors={errors}

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { applySessionCookie, createSessionToken } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { registerSchema } from "@/lib/validators/auth";
 import { isBlacklisted } from "@/lib/blacklist";
@@ -78,14 +79,18 @@ export async function POST(request: Request) {
       return created;
     });
 
-    await logAudit({
-      userId: user.id,
-      action: "USER_REGISTERED",
-      entity: "User",
-      entityId: user.id,
-      ipAddress: ip,
-      metadata: { role: data.role },
-    });
+    try {
+      await logAudit({
+        userId: user.id,
+        action: "USER_REGISTERED",
+        entity: "User",
+        entityId: user.id,
+        ipAddress: ip,
+        metadata: { role: data.role },
+      });
+    } catch (auditErr) {
+      console.error("[register] audit", auditErr);
+    }
 
     try {
       await sendRegistrationConfirmation(email, data.firstName);
@@ -93,7 +98,32 @@ export async function POST(request: Request) {
       // non-blocking when SMTP is not configured
     }
 
-    return NextResponse.json({ id: user.id, status: user.status }, { status: 201 });
+    const name = user.profile
+      ? `${user.profile.firstName} ${user.profile.lastName}`
+      : user.email;
+
+    const token = await createSessionToken({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      name,
+    });
+
+    const response = NextResponse.json(
+      {
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          status: user.status,
+          name,
+        },
+      },
+      { status: 201 }
+    );
+    applySessionCookie(response, token, request);
+    return response;
   } catch (err) {
     console.error("[register]", err);
     return NextResponse.json({ error: "Registration failed" }, { status: 500 });

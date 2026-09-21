@@ -21,6 +21,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   ACCOUNT_DELETED: "This account no longer exists.",
   CredentialsSignin: "Invalid email or password.",
   "Invalid email or password": "Invalid email or password.",
+  "Login failed":
+    "Something went wrong on our side. Wait a moment and try again, or reset your password.",
 };
 
 export default function LoginPage() {
