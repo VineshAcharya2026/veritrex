@@ -1,30 +1,72 @@
 import nodemailer from "nodemailer";
 import { formatCurrency } from "@/lib/utils";
+import { readWorkerEnvString } from "@/lib/worker-env";
+
+function env(key: string): string | undefined {
+  const v = readWorkerEnvString(key) ?? process.env[key]?.trim();
+  return v || undefined;
+}
+
+function defaultFrom(): string {
+  return env("EMAIL_FROM") || "Veritrex <noreply@veritrex.org>";
+}
 
 function getTransporter() {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_PASS) return null;
+  const host = env("SMTP_HOST");
+  const pass = env("SMTP_PASS");
+  if (!host || !pass) return null;
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || "587", 10),
+    host,
+    port: parseInt(env("SMTP_PORT") || "587", 10),
     auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
+      user: env("SMTP_USER"),
+      pass,
     },
   });
 }
 
-async function send(to: string, subject: string, html: string) {
-  const transporter = getTransporter();
-  if (!transporter) {
-    console.log(`[email stub] To: ${to} | ${subject}`);
-    return;
+async function sendViaResend(to: string, subject: string, html: string): Promise<boolean> {
+  const apiKey = env("RESEND_API_KEY");
+  if (!apiKey) return false;
+
+  const from = defaultFrom();
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ from, to: [to], subject, html }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    console.error("[email] Resend failed", res.status, text);
+    return false;
   }
+  return true;
+}
+
+async function sendViaSmtp(to: string, subject: string, html: string): Promise<boolean> {
+  const transporter = getTransporter();
+  if (!transporter) return false;
   await transporter.sendMail({
-    from: process.env.EMAIL_FROM || "Veritrex <info@veritrex.com>",
+    from: defaultFrom(),
     to,
     subject,
     html,
   });
+  return true;
+}
+
+async function send(to: string, subject: string, html: string) {
+  if (await sendViaResend(to, subject, html)) return;
+  if (await sendViaSmtp(to, subject, html)) return;
+  console.log(`[email stub] To: ${to} | ${subject}`);
+  if (html.includes("href=")) {
+    const match = html.match(/href="([^"]+)"/);
+    if (match?.[1]) console.log(`[email stub] Link: ${match[1]}`);
+  }
 }
 
 export async function sendReferralConfirmation(
@@ -92,7 +134,7 @@ export async function sendRetentionReminder(
 }
 
 export async function sendAdminAlert(subject: string, body: string) {
-  const adminEmail = process.env.ADMIN_ALERT_EMAIL;
+  const adminEmail = env("ADMIN_ALERT_EMAIL");
   if (!adminEmail) {
     console.log(`[admin alert] ${subject}: ${body}`);
     return;
@@ -103,8 +145,8 @@ export async function sendAdminAlert(subject: string, body: string) {
 export async function sendRegistrationConfirmation(email: string, firstName: string) {
   await send(
     email,
-    `Welcome to ${process.env.BRAND_NAME || "Veritrex"}`,
-    `<p>Hi ${firstName},</p><p>Your ${process.env.BRAND_NAME || "Veritrex"} account is ready. Sign in anytime to complete your profile and start connecting.</p>`
+    `Welcome to ${env("BRAND_NAME") || "Veritrex"}`,
+    `<p>Hi ${firstName},</p><p>Your ${env("BRAND_NAME") || "Veritrex"} account is ready. Sign in anytime to complete your profile and start connecting.</p>`
   );
 }
 

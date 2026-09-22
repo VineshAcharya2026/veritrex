@@ -81,6 +81,12 @@ interface CloudflareEnv {
   NEXTAUTH_SECRET?: string;
   NEXTAUTH_URL?: string;
   CRON_SECRET?: string;
+  RESEND_API_KEY?: string;
+  SMTP_HOST?: string;
+  SMTP_PASS?: string;
+  SMTP_USER?: string;
+  SMTP_PORT?: string;
+  EMAIL_FROM?: string;
   MENTOR_CONTENT?: R2Bucket;
   HYPERDRIVE?: Hyperdrive;
   ASSETS: Fetcher;

@@ -33,7 +33,7 @@ function ResetPasswordForm() {
       credentials: "include",
       body: JSON.stringify({ token, password }),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     setLoading(false);
     if (!res.ok) {
       setError(formatApiError(data.error, "Reset failed"));

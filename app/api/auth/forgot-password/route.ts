@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { resolveAppUrl } from "@/lib/platform";
 import {
   createPasswordResetToken,
   sendPasswordResetLink,
@@ -28,10 +29,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
   }
 
-  const token = await createPasswordResetToken(user.id, user.email);
-  if (token) {
-    const origin = new URL(request.url).origin;
+  try {
+    const token = await createPasswordResetToken(user.id, user.email);
+    if (!token) {
+      console.error("[forgot-password] AUTH_KV missing or token creation failed");
+      return NextResponse.json({ ok: true });
+    }
+    const origin = resolveAppUrl();
     await sendPasswordResetLink(user.email, token, origin);
+  } catch (err) {
+    console.error("[forgot-password]", err);
   }
 
   return NextResponse.json({ ok: true });

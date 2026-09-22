@@ -99,7 +99,10 @@ npm run db:d1:seed:remote
 npx wrangler secret put AUTH_SECRET
 npx wrangler secret put NEXTAUTH_URL    # https://veritrex.org (no trailing slash)
 npx wrangler secret put CRON_SECRET     # optional; required for scheduled integrity jobs
+npx wrangler secret put RESEND_API_KEY  # recommended for password reset email on Workers
 ```
+
+Optional SMTP fallback: `SMTP_HOST`, `SMTP_PASS`, `SMTP_USER`, `SMTP_PORT`, `EMAIL_FROM` (worker secrets or `.dev.vars`).
 
 ### 4. Build and deploy
 
@@ -138,6 +141,8 @@ Ensure `wrangler.toml` lists correct `database_id` and KV `id` before the first 
 
 - `GET /api/health` → `{ "status": "ok", "checks": { "d1": "ok", "auth": "ok" } }`
 - `POST /api/auth/login` with demo credentials (JSON body; use a file on Windows shells to avoid escaping issues)
+- `POST /api/auth/forgot-password` then check inbox (requires `RESEND_API_KEY` or SMTP)
+- `node scripts/smoke-rating.mjs --base https://veritrex.org` — outcome + bilateral session ratings
 - `GET /api/auth/me` returns role/status
 - Role dashboards load for admin/mentor/mentee
 
