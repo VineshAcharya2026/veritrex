@@ -43,8 +43,8 @@ export const mentorNav: NavItem[] = [
   { href: "/dashboard/mentor/profile", label: "Profile", icon: UserCircle },
   { href: "/dashboard/friends", label: "Find Friends", icon: UserPlus },
   { href: "/dashboard/mentor/nation-building", label: "Impact Score", icon: Globe },
-  { href: "/dashboard/mentor/inner-circle", label: "Inner Circle", icon: Crown },
-  { href: "/dashboard/mentor/reflection", label: "Reflection", icon: HeartHandshake },
+  { href: "/dashboard/mentor/inner-circle", label: "Inner Circle (Mentor program)", icon: Crown },
+  { href: "/dashboard/mentor/reflection", label: "Inner Circle (Community)", icon: HeartHandshake },
 ];
 
 export const menteeNav: NavItem[] = [
@@ -56,7 +56,7 @@ export const menteeNav: NavItem[] = [
   { href: "/dashboard/mentee/profile", label: "Profile", icon: UserCircle },
   { href: "/dashboard/friends", label: "Find Friends", icon: UserPlus },
   { href: "/dashboard/mentee/goals", label: "Goals", icon: Target },
-  { href: "/dashboard/mentee/reflection", label: "Reflection", icon: HeartHandshake },
+  { href: "/dashboard/mentee/reflection", label: "Inner Circle (Community)", icon: HeartHandshake },
 ];
 
 export const adminNav = superAdminNav;

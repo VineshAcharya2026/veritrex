@@ -2,10 +2,12 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { RecentPostsSection } from "@/components/feed/RecentPostsSection";
 import { ProfileHeader, ProfileSectionCard } from "@/components/profile/ProfileHeader";
+import { PublicProfileLayout } from "@/components/profile/PublicProfileLayout";
+import { ProfilePublicSidebar } from "@/components/profile/ProfilePublicSidebar";
 import { getMentorImpact } from "@/lib/nation-building-impact";
 import { BADGE_META } from "@/lib/nation-building";
 import type { NationBuildingBadge } from "@/lib/db/types";
-import { Award, MapPin, Building2, CheckCircle } from "lucide-react";
+import { Award, CheckCircle } from "lucide-react";
 
 export default async function PublicMentorProfilePage({
   params,
@@ -55,9 +57,11 @@ export default async function PublicMentorProfilePage({
     { label: "Volunteer Hours", value: impact.kpis.volunteerHours },
   ];
 
+  const tier = (trust?.tier as string) ?? "EMERGING";
+
   return (
-    <div className="min-h-screen bg-[#f3f2ef]">
-      <div className="mx-auto max-w-5xl space-y-4 px-4 py-8">
+    <PublicProfileLayout
+      header={
         <ProfileHeader
           name={name}
           avatar={profile?.avatar ?? null}
@@ -65,7 +69,7 @@ export default async function PublicMentorProfilePage({
           headline={headline}
           summary={p.professionalSummary}
           location={p.city}
-          tier={(trust?.tier as string) ?? "EMERGING"}
+          tier={tier}
           userId={id}
           primaryAction={{
             href: `/dashboard/mentee/mentors?request=${id}`,
@@ -73,9 +77,9 @@ export default async function PublicMentorProfilePage({
           }}
           linkedInUrl={p.linkedInUrl}
         />
-
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
-          <div className="space-y-4">
+      }
+      main={
+        <>
             {p.whyMentor && (
               <ProfileSectionCard title="Why I Mentor">
                 <p className="text-sm italic text-primary/70">&ldquo;{p.whyMentor}&rdquo;</p>
@@ -192,61 +196,53 @@ export default async function PublicMentorProfilePage({
             <ProfileSectionCard title="Activity">
               <RecentPostsSection authorId={id} hideHeader />
             </ProfileSectionCard>
-          </div>
-
-          <aside className="space-y-4">
-            <ProfileSectionCard title="About">
-              <ul className="space-y-2 text-sm text-muted">
-                {p.city && (
-                  <li className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    {p.city}
-                  </li>
-                )}
-                {p.industry && (
-                  <li className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
-                    {p.industry}
-                  </li>
-                )}
-                {p.yearsOfExperienceRange && (
-                  <li className="flex items-center gap-2">
-                    <Award className="h-4 w-4" />
-                    {p.yearsOfExperienceRange} years
-                  </li>
-                )}
-                {p.languages.length > 0 && (
-                  <li className="text-primary/70">
-                    Languages: {p.languages.join(", ")}
-                  </li>
-                )}
-                {p.company && (
-                  <li className="text-primary/70">
-                    {p.title ? `${p.title} at ` : ""}
-                    {p.company}
-                  </li>
-                )}
-              </ul>
+        </>
+      }
+      sidebar={
+        <>
+          <ProfilePublicSidebar
+            userId={id}
+            tier={tier}
+            location={p.city}
+            industry={p.industry}
+            roleLabel="Mentor on Veritrex"
+          />
+          {p.skills.length > 0 && (
+            <ProfileSectionCard title="Skills">
+              <div className="flex flex-wrap gap-2">
+                {p.skills.map((s: { skill: string; masteryLevel: number }) => (
+                  <span
+                    key={s.skill}
+                    className="rounded-full border border-primary/10 px-2.5 py-1 text-xs text-primary/80"
+                  >
+                    {s.skill}
+                    <span className="ml-1 text-muted">· {s.masteryLevel}/5</span>
+                  </span>
+                ))}
+              </div>
             </ProfileSectionCard>
-
-            {p.skills.length > 0 && (
-              <ProfileSectionCard title="Skills">
-                <div className="flex flex-wrap gap-2">
-                  {p.skills.map((s: { skill: string; masteryLevel: number }) => (
-                    <span
-                      key={s.skill}
-                      className="rounded-full border border-primary/10 px-2.5 py-1 text-xs text-primary/80"
-                    >
-                      {s.skill}
-                      <span className="ml-1 text-muted">· {s.masteryLevel}/5</span>
-                    </span>
-                  ))}
-                </div>
-              </ProfileSectionCard>
-            )}
-          </aside>
-        </div>
-      </div>
-    </div>
+          )}
+          <ProfileSectionCard title="Experience">
+            <ul className="space-y-2 text-sm text-muted">
+              {p.yearsOfExperienceRange && (
+                <li className="flex items-center gap-2">
+                  <Award className="h-4 w-4" />
+                  {p.yearsOfExperienceRange} years
+                </li>
+              )}
+              {p.languages.length > 0 && (
+                <li className="text-primary/70">Languages: {p.languages.join(", ")}</li>
+              )}
+              {p.company && (
+                <li className="text-primary/70">
+                  {p.title ? `${p.title} at ` : ""}
+                  {p.company}
+                </li>
+              )}
+            </ul>
+          </ProfileSectionCard>
+        </>
+      }
+    />
   );
 }

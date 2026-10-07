@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -191,6 +192,8 @@ export function MemberReflectionForm() {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [completedAt, setCompletedAt] = useState<string | null>(null);
+  const [reviewStatus, setReviewStatus] = useState<string | null>(null);
+  const [submittedAt, setSubmittedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -225,6 +228,8 @@ export function MemberReflectionForm() {
             gentleCommitment: data.gentleCommitment ?? "",
           });
           setCompletedAt(data.completedAt ?? null);
+          setReviewStatus(data.reviewStatus ?? null);
+          setSubmittedAt(data.submittedAt ?? null);
         }
       })
       .finally(() => setLoading(false));
@@ -267,6 +272,8 @@ export function MemberReflectionForm() {
       return;
     }
     setCompletedAt(data.completedAt ?? null);
+    setReviewStatus(data.reviewStatus ?? null);
+    setSubmittedAt(data.submittedAt ?? null);
     setSaved(true);
     if (submit) setStep(REFLECTION_SECTIONS.length - 1);
   }
@@ -278,23 +285,91 @@ export function MemberReflectionForm() {
     return <div className="h-48 animate-pulse rounded-xl bg-primary/5" />;
   }
 
+  if (reviewStatus === "PENDING") {
+    const when = submittedAt || completedAt;
+    return (
+      <div className="mx-auto max-w-2xl space-y-6">
+        <PageHeader
+          title="Inner Circle (Community)"
+          description="Your application has been received."
+        />
+        <div className="rounded-xl border border-primary/8 bg-white p-8 shadow-card space-y-4 text-center">
+          <h2 className="text-lg font-semibold text-primary">Your application is under review.</h2>
+          <p className="text-sm text-muted">
+            We will update you once you are selected for the Inner Circle community.
+          </p>
+          {when && (
+            <p className="text-xs text-muted">
+              Submitted {new Date(when).toLocaleDateString()}
+            </p>
+          )}
+          <div className="flex flex-wrap justify-center gap-3 pt-2">
+            <Link
+              href="/dashboard/friends"
+              className="text-sm font-medium text-accent hover:underline"
+            >
+              Find friends
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (reviewStatus === "APPROVED") {
+    return (
+      <div className="mx-auto max-w-2xl space-y-6">
+        <PageHeader
+          title="Inner Circle (Community)"
+          description="Welcome to the circle."
+        />
+        <Alert variant="success">
+          Welcome to the Inner Circle. Your application was approved.
+        </Alert>
+        <p className="text-sm text-muted">
+          Explore the community feed, connect with members, and share your journey.
+        </p>
+        <Link href="/dashboard/friends" className="text-sm font-medium text-accent hover:underline">
+          Find friends
+        </Link>
+      </div>
+    );
+  }
+
+  if (reviewStatus === "REJECTED") {
+    return (
+      <div className="mx-auto max-w-2xl space-y-6">
+        <PageHeader
+          title="Inner Circle (Community)"
+          description="Revise and resubmit your application."
+        />
+        <Alert variant="error">
+          Your previous application was not selected. You may update your answers and submit again.
+        </Alert>
+        <Button type="button" variant="accent" onClick={() => setReviewStatus(null)}>
+          Revise application
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <PageHeader
-        title="Member Reflection"
-        description="The Circle — share your story so we can build authentic connections. There are no right or wrong answers."
+        title="Inner Circle (Community)"
+        description="Share your story so we can build authentic connections in the circle. There are no right or wrong answers."
       />
 
       <p className="rounded-xl border border-primary/8 bg-accent/5 px-4 py-3 text-sm text-muted">
         {REFLECTION_FORM_DESCRIPTION}
       </p>
 
-      {completedAt && (
+      {completedAt && !reviewStatus && (
         <Alert variant="success">
-          Reflection submitted on {new Date(completedAt).toLocaleDateString()}. You can still update your answers.
+          Draft saved. Submit your application when you are ready.
         </Alert>
       )}
-      {saved && <Alert variant="success">{isLast ? "Reflection saved." : "Draft saved."}</Alert>}
+      {saved && <Alert variant="success">{isLast ? "Application submitted." : "Draft saved."}</Alert>}
       {error && <Alert variant="error">{error}</Alert>}
 
       <div className="flex flex-wrap gap-2">
@@ -513,7 +588,7 @@ export function MemberReflectionForm() {
               </Button>
             ) : (
               <Button type="submit" variant="accent" disabled={saving}>
-                Submit reflection
+                Submit application
               </Button>
             )}
           </div>

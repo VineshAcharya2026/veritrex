@@ -677,7 +677,8 @@ function allColumns(model: ModelName): string[] {
       "admiredPerson", "meaningPurpose", "dreamMission", "societalAspiration", "othersDescribeYou",
       "valuedQualities", "energizingPeople", "differentBeliefsApproach", "confidentialityImportance",
       "supportWays", "contributions", "leadershipLoneliness", "supportNeeded", "sharingTopics",
-      "rememberedFor", "additionalNotes", "gentleCommitment", "completedAt", "createdAt", "updatedAt",
+      "rememberedFor", "additionalNotes", "gentleCommitment", "completedAt", "reviewStatus",
+      "submittedAt", "reviewedAt", "createdAt", "updatedAt",
     ],
     mentorship: [
       "id", "mentorId", "menteeId", "status", "message", "isFreeOrConcessional", "createdAt", "updatedAt",

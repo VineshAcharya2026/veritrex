@@ -79,6 +79,20 @@ export async function PATCH(request: Request) {
 
   const { submit, ...fields } = parsed.data;
 
+  const existing = await prisma.memberReflection.findUnique({
+    where: { userId: session.user.id },
+  });
+
+  if (
+    existing?.reviewStatus === "PENDING" ||
+    existing?.reviewStatus === "APPROVED"
+  ) {
+    return NextResponse.json(
+      { error: "Your application is under review or approved and cannot be edited." },
+      { status: 403 }
+    );
+  }
+
   if (submit) {
     const validation = validateReflectionSubmit(parsed.data);
     if (!validation.ok) {
@@ -87,17 +101,27 @@ export async function PATCH(request: Request) {
   }
 
   const data = toReflectionData(fields);
+  const now = new Date();
 
   const reflection = await prisma.memberReflection.upsert({
     where: { userId: session.user.id },
     create: {
       ...data,
       userId: session.user.id,
-      completedAt: submit ? new Date() : null,
+      completedAt: submit ? now : null,
+      submittedAt: submit ? now : null,
+      reviewStatus: submit ? "PENDING" : null,
     },
     update: {
       ...data,
-      ...(submit ? { completedAt: new Date() } : {}),
+      ...(submit
+        ? {
+            completedAt: now,
+            submittedAt: now,
+            reviewStatus: "PENDING",
+            reviewedAt: null,
+          }
+        : {}),
     },
   });
 

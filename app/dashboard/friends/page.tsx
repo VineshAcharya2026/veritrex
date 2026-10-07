@@ -1,41 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { MentorFriendCard } from "@/components/mentor/MentorFriendCard";
+import { MemberDiscoverCard } from "@/components/users/MemberDiscoverCard";
 import { Alert } from "@/components/ui/alert";
-import { useSession } from "@/lib/auth/client";
+import { cn } from "@/lib/utils";
+import type { DiscoveredUser } from "@/app/api/friends/route";
 
-type MentorMatch = {
-  score: number;
-  reasons: string[];
-  user: Parameters<typeof MentorFriendCard>[0]["mentor"] & { userId: string };
-};
+type Match = { score: number; reasons: string[]; user: DiscoveredUser };
 
-type MenteeMatch = {
-  score: number;
-  reasons: string[];
-  user: {
-    userId: string;
-    role: "MENTEE";
-    currentDesignation?: string | null;
-    currentRole?: string | null;
-    preferredIndustry?: string | null;
-    city?: string | null;
-    guidanceAreas?: string[];
-    profile?: {
-      firstName: string;
-      lastName: string;
-      avatar?: string | null;
-    } | null;
-  };
-};
+type RoleFilter = "ALL" | "MENTOR" | "MENTEE";
 
 export default function FriendsPage() {
-  const { data: session } = useSession();
-  const [matches, setMatches] = useState<(MentorMatch | MenteeMatch)[]>([]);
+  const [matches, setMatches] = useState<Match[]>([]);
   const [error, setError] = useState("");
+  const [filter, setFilter] = useState<RoleFilter>("ALL");
 
   useEffect(() => {
     fetch("/api/friends")
@@ -46,73 +25,55 @@ export default function FriendsPage() {
       });
   }, []);
 
-  const isMentor = session?.user?.role === "MENTOR";
+  const visible = useMemo(() => {
+    if (filter === "ALL") return matches;
+    return matches.filter((m) => m.user.role === filter);
+  }, [matches, filter]);
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Find your friends"
-        description={
-          isMentor
-            ? "Discover mentors with similar expertise, industry, seniority, and interests."
-            : "Connect with mentees who share your goals, industry focus, and guidance areas."
-        }
+        title="Find friends"
+        description="Discover mentors and mentees across Veritrex — peers and cross-role connections based on your profile."
       />
       {error && <Alert variant="error">{error}</Alert>}
-      {matches.length === 0 && !error && (
+
+      <div className="flex flex-wrap gap-2">
+        {(
+          [
+            ["ALL", "All"],
+            ["MENTOR", "Mentors"],
+            ["MENTEE", "Mentees"],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setFilter(key)}
+            className={cn(
+              "rounded-full px-4 py-1.5 text-xs font-medium",
+              filter === key ? "bg-accent text-white" : "bg-primary/5 text-muted hover:bg-primary/10"
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {visible.length === 0 && !error && (
         <p className="text-sm text-muted">
-          No matches yet. Complete your profile to improve recommendations.
+          No members to show yet. Complete your profile to improve recommendations.
         </p>
       )}
       <div className="grid gap-4 md:grid-cols-2">
-        {matches.map((m) => {
-          if (isMentor && "company" in m.user) {
-            return (
-              <MentorFriendCard
-                key={m.user.userId}
-                mentor={m.user}
-                score={m.score}
-                reasons={m.reasons}
-              />
-            );
-          }
-
-          const u = m.user as MenteeMatch["user"];
-          const name = u.profile
-            ? `${u.profile.firstName} ${u.profile.lastName}`
-            : "Mentee";
-          return (
-            <div
-              key={u.userId}
-              className="rounded-xl border border-primary/8 bg-white p-5 shadow-card"
-            >
-              <div className="flex items-start gap-3">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                  {u.profile?.avatar ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={u.profile.avatar} alt="" className="h-full w-full rounded-full object-cover" />
-                  ) : (
-                    name.slice(0, 2).toUpperCase()
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <Link href={`/mentee/${u.userId}`} className="font-semibold text-primary hover:underline">
-                    {name}
-                  </Link>
-                  <p className="text-xs text-muted">
-                    {[u.currentDesignation || u.currentRole, u.preferredIndustry, u.city]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </p>
-                  {m.reasons.length > 0 && (
-                    <p className="mt-2 text-xs text-muted">{m.reasons.join(" · ")}</p>
-                  )}
-                  <p className="mt-1 text-xs font-medium text-accent">Match score {m.score}</p>
-                </div>
-              </div>
-            </div>
-          );
-        })}
+        {visible.map((m) => (
+          <MemberDiscoverCard
+            key={m.user.userId}
+            user={m.user}
+            score={m.score}
+            reasons={m.reasons}
+          />
+        ))}
       </div>
     </div>
   );
